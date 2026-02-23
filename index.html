@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Pitch Tracker (Offline)</title>
+
+  <!-- iPhone "app-like" -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+  <style>
+    body { font-family: system-ui, -apple-system, Arial; margin: 0; background:#0b1220; color:#e7eefc; }
+    header { padding: 14px 16px; background:#121a2b; position: sticky; top: 0; border-bottom: 1px solid #26314a; }
+    h1 { font-size: 18px; margin: 0; }
+    .wrap { padding: 14px 16px; max-width: 980px; margin: 0 auto; }
+    .card { background:#121a2b; border: 1px solid #26314a; border-radius: 12px; padding: 12px; margin: 12px 0; }
+    .row { display:flex; gap:10px; flex-wrap: wrap; }
+    input, select, button { font-size: 16px; border-radius: 10px; border: 1px solid #26314a; padding: 10px; background:#0b1220; color:#e7eefc; }
+    button { background:#1c2a4a; cursor: pointer; }
+    button.primary { background:#2b5cff; border-color:#2b5cff; }
+    button.danger { background:#a52b2b; border-color:#a52b2b; }
+    button.small { padding: 8px 10px; font-size: 14px; }
+    .grid { display:grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .pill { display:inline-block; padding: 6px 10px; border-radius: 999px; background:#0b1220; border:1px solid #26314a; font-size: 14px; }
+    .muted { color:#a7b4d6; font-size: 14px; }
+    .two { display:grid; grid-template-columns: 1fr; gap: 12px; }
+    @media (min-width: 850px) { .two { grid-template-columns: 1fr 1fr; } }
+    table { width:100%; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid #26314a; padding: 8px; text-align:left; font-size: 14px; }
+    .zonebtn { width:100%; padding: 14px; font-weight: 700; }
+    .quick { display:flex; gap: 8px; flex-wrap: wrap; }
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>Pitch Tracker (Offline Prototype)</h1>
+    <div class="muted" id="statusLine">Loading…</div>
+  </header>
+
+  <div class="wrap">
+
+    <div class="card">
+      <div class="row">
+        <input id="opponent" placeholder="Opponent (e.g., Wilmington)" />
+        <input id="field" placeholder="Field (optional)" />
+        <button class="primary" id="newGameBtn">New Game</button>
+        <button class="danger" id="clearAllBtn">Clear All Data</button>
+      </div>
+      <div class="muted">Tip: after you deploy, open in Safari → Share → <b>Add to Home Screen</b></div>
+    </div>
+
+    <div class="two">
+      <div class="card">
+        <h2 style="margin:0 0 10px 0; font-size:16px;">Lineup</h2>
+        <div class="row">
+          <input id="bNum" placeholder="# (e.g., 10)" inputmode="numeric" />
+          <input id="bName" placeholder="Batter name" />
+          <select id="bats">
+            <option value="R">Bats R</option>
+            <option value="L">Bats L</option>
+            <option value="S">Switch</option>
+          </select>
+          <button id="addBatterBtn">Add</button>
+        </div>
+        <div id="lineupList" class="muted" style="margin-top:10px;"></div>
+      </div>
+
+      <div class="card">
+        <h2 style="margin:0 0 10px 0; font-size:16px;">Live</h2>
+
+        <div class="row">
+          <input id="pName" placeholder="Pitcher name" />
+          <button id="setPitcherBtn">Set Pitcher</button>
+          <span class="pill" id="pitcherTag">Pitcher: (none)</span>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <select id="batterSelect"></select>
+          <button id="setBatterBtn">Set Batter</button>
+          <span class="pill" id="batterTag">Batter: (none)</span>
+        </div>
+
+        <div class="card" style="margin-top:12px;">
+          <div class="muted">1) Pick pitch type:</div>
+          <div class="quick" id="pitchTypes"></div>
+
+          <div class="muted" style="margin-top:10px;">2) Tap zone (1–9):</div>
+          <div class="grid" id="zoneGrid"></div>
+
+          <div class="muted" style="margin-top:10px;">3) Pick result:</div>
+          <div class="quick" id="results"></div>
+
+          <div class="row" style="margin-top:10px;">
+            <button class="small" id="undoBtn">Undo last</button>
+            <span class="pill" id="pendingTag">Ready</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin:0 0 10px 0; font-size:16px;">Quick Stats</h2>
+      <div id="statsBox" class="muted">No pitches yet.</div>
+    </div>
+
+    <div class="card">
+      <h2 style="margin:0 0 10px 0; font-size:16px;">Recent Pitches</h2>
+      <div id="recentBox" class="muted">No pitches yet.</div>
+    </div>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
