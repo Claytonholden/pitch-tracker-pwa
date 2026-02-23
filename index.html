@@ -14,7 +14,6 @@
       --good:#22c55e;
       --warn:#f59e0b;
       --bad:#ef4444;
-      --line:#243055;
       --btn:#1f2a52;
     }
     *{box-sizing:border-box; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;}
@@ -60,6 +59,8 @@
     .btnGood{background:rgba(34,197,94,.18); border-color:rgba(34,197,94,.45)}
     .btnWarn{background:rgba(245,158,11,.18); border-color:rgba(245,158,11,.45)}
     .btnBad{background:rgba(239,68,68,.18); border-color:rgba(239,68,68,.45)}
+    .mini{font-size:12px; padding:10px}
+    .kpi{display:flex; flex-wrap:wrap; gap:8px;}
     .pill{
       display:inline-flex; align-items:center; gap:6px;
       padding:6px 10px; border-radius:999px;
@@ -73,8 +74,7 @@
     .pill.good{border-color:rgba(34,197,94,.5)}
     .pill.warn{border-color:rgba(245,158,11,.5)}
     .pill.bad{border-color:rgba(239,68,68,.5)}
-    .mini{font-size:12px; padding:10px}
-    .kpi{display:flex; flex-wrap:wrap; gap:8px;}
+
     .strikeZone{
       display:grid;
       grid-template-columns:repeat(3, 1fr);
@@ -87,11 +87,13 @@
       border:1px solid rgba(255,255,255,.10);
       background:rgba(0,0,0,.18);
       font-weight:900;
+      font-size:16px;
     }
     .zoneCell.active{
       outline:2px solid rgba(124,58,237,.85);
       background:rgba(124,58,237,.18);
     }
+
     .table{
       width:100%;
       border-collapse:separate;
@@ -117,12 +119,26 @@
       display:none;
       max-width:92vw;
     }
+    .metricsGrid{
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:8px;
+    }
+    .metricBox{
+      border:1px solid rgba(255,255,255,.10);
+      background:rgba(0,0,0,.16);
+      border-radius:12px;
+      padding:10px;
+    }
+    .metricBox .label{color:var(--muted); font-size:11px; font-weight:800; letter-spacing:.2px}
+    .metricBox .value{font-size:16px; font-weight:950; margin-top:4px}
+    .smallTable td{padding:8px; font-size:12px}
   </style>
 </head>
 <body>
   <div class="wrap">
     <h1>Pitch Tracker (Offline) — fast input + auto count</h1>
-    <div class="muted">Tip: this runs fully offline on your iPhone once the page is loaded. Data saves automatically.</div>
+    <div class="muted">Runs offline once loaded. Saves automatically to your phone.</div>
 
     <div class="row" style="margin-top:12px;">
       <!-- LEFT: CONTROLS -->
@@ -190,15 +206,15 @@
 
             <div class="muted">Location (tap a zone)</div>
             <div class="strikeZone" id="zone">
-              <div class="zoneCell" data-zone="1">⬆️⬅️</div>
-              <div class="zoneCell" data-zone="2">⬆️</div>
-              <div class="zoneCell" data-zone="3">⬆️➡️</div>
-              <div class="zoneCell" data-zone="4">⬅️</div>
-              <div class="zoneCell" data-zone="5">🎯</div>
-              <div class="zoneCell" data-zone="6">➡️</div>
-              <div class="zoneCell" data-zone="7">⬇️⬅️</div>
-              <div class="zoneCell" data-zone="8">⬇️</div>
-              <div class="zoneCell" data-zone="9">⬇️➡️</div>
+              <div class="zoneCell" data-zone="1">1</div>
+              <div class="zoneCell" data-zone="2">2</div>
+              <div class="zoneCell" data-zone="3">3</div>
+              <div class="zoneCell" data-zone="4">4</div>
+              <div class="zoneCell" data-zone="5">5</div>
+              <div class="zoneCell" data-zone="6">6</div>
+              <div class="zoneCell" data-zone="7">7</div>
+              <div class="zoneCell" data-zone="8">8</div>
+              <div class="zoneCell" data-zone="9">9</div>
             </div>
 
             <div class="line"></div>
@@ -244,8 +260,34 @@
         </div>
       </div>
 
-      <!-- RIGHT: LOG / SUMMARY -->
+      <!-- RIGHT: LOG / METRICS -->
       <div class="card">
+        <div class="muted">Advanced Metrics (auto)</div>
+        <div class="line"></div>
+
+        <div class="metricsGrid" id="metricsGrid"></div>
+
+        <div class="line"></div>
+
+        <div class="grid2">
+          <div>
+            <div class="muted">Pitch Type Usage</div>
+            <table class="table smallTable" id="pitchTypeTable">
+              <thead><tr><th>Type</th><th class="right">#</th><th class="right">%</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+          <div>
+            <div class="muted">Zone Usage</div>
+            <table class="table smallTable" id="zoneTable">
+              <thead><tr><th>Zone</th><th class="right">#</th><th class="right">%</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="line"></div>
+
         <div class="muted">Session Log</div>
         <div class="line"></div>
 
@@ -262,7 +304,7 @@
 
         <div class="line"></div>
 
-        <div class="muted">Notes / Ideas</div>
+        <div class="muted">Notes</div>
         <textarea id="notes" placeholder="Optional notes (saved offline too)"></textarea>
       </div>
     </div>
@@ -271,14 +313,7 @@
   <div class="toast" id="toast"></div>
 
 <script>
-/* =========================================================
-   Pitch Tracker (Offline) - Single file
-   - Tracks count, pitch count, auto K/BB, lineup, log
-   - Saves to localStorage
-========================================================= */
-
-const LS_KEY = "pitch_tracker_v1";
-
+const LS_KEY = "pitch_tracker_v2";
 const $ = (id) => document.getElementById(id);
 
 const state = loadState() || {
@@ -289,7 +324,7 @@ const state = loadState() || {
   totals: { pitches: 0, k: 0, bb: 0, h: 0, outs: 0 },
   selectedZone: null,
   notes: "",
-  log: [] // each entry: {n, ts, batter, action, pitchType, velo, zone, beforeCount, afterCount, paEnded, paResult}
+  log: []
 };
 
 function saveState(){
@@ -302,7 +337,6 @@ function loadState(){
     return JSON.parse(raw);
   } catch(e){ return null; }
 }
-
 function toast(msg){
   const t = $("toast");
   t.textContent = msg;
@@ -311,21 +345,11 @@ function toast(msg){
   toast._timer = setTimeout(()=> t.style.display="none", 1400);
 }
 
-/* -----------------------
-   Lineup parsing
------------------------ */
 function parseLineup(text){
-  // Accept lines like:
-  // "1) #10 Clayton Holden"
-  // "#10 Clayton Holden"
-  // "10 Clayton Holden"
-  // "Clayton Holden"
   const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
   const out = [];
   for(const line of lines){
-    // strip leading "1) "
     const cleaned = line.replace(/^\d+\)\s*/, "");
-    // find jersey number
     let jersey = "";
     let name = cleaned;
 
@@ -334,7 +358,6 @@ function parseLineup(text){
       jersey = m1[1];
       name = m1[2].trim();
     }
-    // if name still has "#"
     name = name.replace(/^#/, "").trim();
 
     out.push({
@@ -373,56 +396,35 @@ function currentBatter(){
   return state.lineup[state.currentBatterIndex];
 }
 
-function setCount(balls, strikes){
-  state.count.balls = Math.max(0, Math.min(3, balls));
-  state.count.strikes = Math.max(0, Math.min(2, strikes));
-}
-
-/* -----------------------
-   Count logic
------------------------ */
 function applyActionToCount(action){
-  // returns { paEnded:boolean, paResult:string|null }
   let { balls, strikes } = state.count;
   let paEnded = false;
   let paResult = null;
 
   if(action === "ball"){
     balls += 1;
-    if(balls >= 4){
-      paEnded = true;
-      paResult = "WALK";
-    }
+    if(balls >= 4){ paEnded = true; paResult = "WALK"; }
   }
   else if(action === "called_strike" || action === "swinging_strike"){
     strikes += 1;
-    if(strikes >= 3){
-      paEnded = true;
-      paResult = "STRIKEOUT";
-    }
+    if(strikes >= 3){ paEnded = true; paResult = "STRIKEOUT"; }
   }
   else if(action === "foul"){
-    // foul adds strike unless already 2
     if(strikes < 2) strikes += 1;
   }
   else if(action === "hbp"){
-    paEnded = true;
-    paResult = "HBP";
+    paEnded = true; paResult = "HBP";
   }
-  else if(action === "single" || action === "double" || action === "triple" || action === "hr"){
-    paEnded = true;
-    paResult = action.toUpperCase();
+  else if(["single","double","triple","hr"].includes(action)){
+    paEnded = true; paResult = action.toUpperCase();
   }
   else if(action === "inplay_out"){
-    paEnded = true;
-    paResult = "OUT";
+    paEnded = true; paResult = "OUT";
   }
   else if(action === "error"){
-    paEnded = true;
-    paResult = "REACHED ON ERROR";
+    paEnded = true; paResult = "REACHED ON ERROR";
   }
 
-  // clamp strikes for display (we display 0-2; 3 happens only for K result)
   state.count.balls = Math.max(0, Math.min(3, balls));
   state.count.strikes = Math.max(0, Math.min(2, strikes));
 
@@ -430,20 +432,15 @@ function applyActionToCount(action){
 }
 
 function endPlateAppearance(result){
-  // update pitcher totals based on PA result
   if(result === "STRIKEOUT") state.totals.k += 1;
   if(result === "WALK") state.totals.bb += 1;
-  if(result === "SINGLE" || result === "DOUBLE" || result === "TRIPLE" || result === "HR") state.totals.h += 1;
+  if(["SINGLE","DOUBLE","TRIPLE","HR"].includes(result)) state.totals.h += 1;
   if(result === "OUT") state.totals.outs += 1;
 
-  // reset count and advance batter
   state.count = { balls: 0, strikes: 0 };
   nextBatter();
 }
 
-/* -----------------------
-   Logging
------------------------ */
 function logEvent(action, paEnded, paResult, beforeCount, afterCount){
   const b = currentBatter();
   const entry = {
@@ -461,65 +458,37 @@ function logEvent(action, paEnded, paResult, beforeCount, afterCount){
     paEnded,
     paResult
   };
-  state.log.unshift(entry); // newest on top
+  state.log.unshift(entry);
 }
 
-/* -----------------------
-   UI updates
------------------------ */
-function updateUI(){
-  // meta
-  $("pitcherName").value = state.meta.pitcherName || "";
-  $("opponent").value = state.meta.opponent || "";
-  $("notes").value = state.notes || "";
+function nextBatter(){
+  if(state.lineup.length === 0) return;
+  state.currentBatterIndex = (state.currentBatterIndex + 1) % state.lineup.length;
+}
+function resetCount(){
+  state.count = { balls: 0, strikes: 0 };
+}
 
-  // count / totals
-  $("countText").textContent = `${state.count.balls}-${state.count.strikes}`;
-  $("pitchCountText").textContent = String(state.totals.pitches);
-  $("kText").textContent = String(state.totals.k);
-  $("bbText").textContent = String(state.totals.bb);
-  $("hText").textContent = String(state.totals.h);
-  $("outsText").textContent = String(state.totals.outs);
+function undoLast(){
+  const last = state.log.shift();
+  if(!last){ toast("Nothing to undo"); return; }
 
-  // lineup dropdown
-  refreshBatterDropdown();
+  state.totals.pitches = Math.max(0, state.totals.pitches - 1);
+  state.count = { balls: last.beforeCount.balls, strikes: last.beforeCount.strikes };
 
-  // zone highlight
-  document.querySelectorAll(".zoneCell").forEach(el=>{
-    el.classList.toggle("active", el.dataset.zone === String(state.selectedZone));
-  });
+  if(last.paEnded && last.paResult){
+    if(last.paResult === "STRIKEOUT") state.totals.k = Math.max(0, state.totals.k - 1);
+    if(last.paResult === "WALK") state.totals.bb = Math.max(0, state.totals.bb - 1);
+    if(["SINGLE","DOUBLE","TRIPLE","HR"].includes(last.paResult)) state.totals.h = Math.max(0, state.totals.h - 1);
+    if(last.paResult === "OUT") state.totals.outs = Math.max(0, state.totals.outs - 1);
 
-  // log table
-  const tbody = $("logTable").querySelector("tbody");
-  tbody.innerHTML = "";
-  const maxRows = 20;
-  state.log.slice(0, maxRows).forEach(e=>{
-    const tr = document.createElement("tr");
-    const c1 = document.createElement("td");
-    c1.textContent = "#" + e.n;
-    const c2 = document.createElement("td");
-
-    const parts = [];
-    parts.push(`<span class="tag">${escapeHtml(e.pitchType)}</span>`);
-    if(e.velo) parts.push(`<span class="tag">${escapeHtml(e.velo)} mph</span>`);
-    if(e.zone) parts.push(`<span class="tag">Zone ${escapeHtml(String(e.zone))}</span>`);
-    parts.push(`<strong>${escapeHtml(e.batter)}</strong> — ${prettyAction(e.action)}`);
-
-    if(e.paEnded && e.paResult){
-      parts.push(`<div style="margin-top:6px;"><span class="tag" style="color:#fff;border-color:rgba(255,255,255,.25)">${escapeHtml(e.paResult)}</span></div>`);
+    if(state.lineup.length > 0){
+      state.currentBatterIndex = (state.currentBatterIndex - 1 + state.lineup.length) % state.lineup.length;
     }
+  }
 
-    c2.innerHTML = parts.join(" ");
-
-    const c3 = document.createElement("td");
-    c3.className = "right";
-    c3.textContent = `${e.afterCount.balls}-${e.afterCount.strikes}`;
-
-    tr.appendChild(c1); tr.appendChild(c2); tr.appendChild(c3);
-    tbody.appendChild(tr);
-  });
-
-  saveState();
+  toast("Undid last");
+  updateUI();
 }
 
 function prettyAction(a){
@@ -545,79 +514,242 @@ function escapeHtml(s){
   }[c]));
 }
 
-/* -----------------------
-   Actions
------------------------ */
-function handleAction(action){
-  if(action === "undo"){
-    undoLast();
-    return;
-  }
-  // count before
-  const before = { balls: state.count.balls, strikes: state.count.strikes };
+function pct(n, d){
+  if(!d) return "0.0%";
+  return ((n/d)*100).toFixed(1) + "%";
+}
 
-  // increment total pitch count for pitch actions
-  // (all these are "a pitch" except undo / next batter / reset)
+function computeAdvanced(){
+  // Work off log oldest->newest so we can detect "first pitch of PA"
+  const events = [...state.log].reverse();
+
+  const totals = {
+    pitches: 0,
+    balls: 0,
+    strikes: 0,
+    csw: 0,        // called + swinging strikes
+    swings: 0,     // swinging strike + foul + in-play (we count in-play as a swing)
+    whiffs: 0,     // swinging strikes
+    fouls: 0,
+    inplay: 0,     // inplay_out + hits + error
+    bf: 0,         // plate appearances ended
+    firstPitchStrikes: 0,
+    k: state.totals.k,
+    bb: state.totals.bb
+  };
+
+  const pitchTypeCounts = new Map();
+  const zoneCounts = new Map();
+
+  // Detect first pitch of each PA by watching when a PA starts:
+  // - start at beginning OR right after paEnded=true
+  let expectingFirstPitch = true;
+
+  for(const e of events){
+    totals.pitches += 1;
+
+    // pitch type / zone usage
+    pitchTypeCounts.set(e.pitchType, (pitchTypeCounts.get(e.pitchType) || 0) + 1);
+    if(e.zone){
+      zoneCounts.set(String(e.zone), (zoneCounts.get(String(e.zone)) || 0) + 1);
+    }
+
+    // classify pitch outcome
+    const a = e.action;
+
+    const isStrike =
+      (a === "called_strike" || a === "swinging_strike" || a === "foul");
+
+    const isBall =
+      (a === "ball");
+
+    const isSwing =
+      (a === "swinging_strike" || a === "foul" || a === "inplay_out" ||
+       a === "single" || a === "double" || a === "triple" || a === "hr" || a === "error");
+
+    const isInPlay =
+      (a === "inplay_out" || a === "single" || a === "double" || a === "triple" || a === "hr" || a === "error");
+
+    if(isStrike) totals.strikes += 1;
+    if(isBall) totals.balls += 1;
+
+    if(a === "called_strike" || a === "swinging_strike") totals.csw += 1;
+
+    if(isSwing) totals.swings += 1;
+    if(a === "swinging_strike") totals.whiffs += 1;
+    if(a === "foul") totals.fouls += 1;
+    if(isInPlay) totals.inplay += 1;
+
+    if(expectingFirstPitch){
+      if(isStrike) totals.firstPitchStrikes += 1;
+      expectingFirstPitch = false;
+    }
+
+    if(e.paEnded){
+      totals.bf += 1;
+      expectingFirstPitch = true;
+    }
+  }
+
+  const kbb = totals.k - totals.bb;
+  const kbbPct = totals.bf ? ((kbb / totals.bf) * 100).toFixed(1) + "%" : "0.0%";
+  const kPct = totals.bf ? ((totals.k / totals.bf) * 100).toFixed(1) + "%" : "0.0%";
+  const bbPct = totals.bf ? ((totals.bb / totals.bf) * 100).toFixed(1) + "%" : "0.0%";
+
+  const kbbRatio = totals.bb ? (totals.k / totals.bb).toFixed(2) : (totals.k ? "∞" : "0.00");
+
+  const strikePct = pct(totals.strikes, totals.pitches);
+  const ballPct = pct(totals.balls, totals.pitches);
+  const cswPct = pct(totals.csw, totals.pitches);
+  const swingPct = pct(totals.swings, totals.pitches);
+  const whiffPct = totals.swings ? ((totals.whiffs / totals.swings) * 100).toFixed(1) + "%" : "0.0%";
+  const foulPct = totals.swings ? ((totals.fouls / totals.swings) * 100).toFixed(1) + "%" : "0.0%";
+  const fpsPct = totals.bf ? ((totals.firstPitchStrikes / totals.bf) * 100).toFixed(1) + "%" : "0.0%";
+  const pPerBF = totals.bf ? (totals.pitches / totals.bf).toFixed(2) : "0.00";
+
+  return {
+    totals,
+    derived: {
+      strikePct, ballPct, cswPct, swingPct, whiffPct, foulPct, fpsPct,
+      kPct, bbPct, kbbPct, kbb, kbbRatio, pPerBF
+    },
+    pitchTypeCounts,
+    zoneCounts
+  };
+}
+
+function renderMetrics(){
+  const m = computeAdvanced();
+  const grid = $("metricsGrid");
+  grid.innerHTML = "";
+
+  const boxes = [
+    ["BF", m.totals.bf],
+    ["Pitches / BF", m.derived.pPerBF],
+    ["Strike%", m.derived.strikePct],
+    ["Ball%", m.derived.ballPct],
+    ["CSW%", m.derived.cswPct],
+    ["Swing%", m.derived.swingPct],
+    ["Whiff%", m.derived.whiffPct],
+    ["1st Pitch Strike%", m.derived.fpsPct],
+    ["K%", m.derived.kPct],
+    ["BB%", m.derived.bbPct],
+    ["K-BB%", m.derived.kbbPct],
+    ["K/BB", m.derived.kbbRatio],
+  ];
+
+  for(const [label, value] of boxes){
+    const div = document.createElement("div");
+    div.className = "metricBox";
+    div.innerHTML = `<div class="label">${escapeHtml(label)}</div><div class="value">${escapeHtml(String(value))}</div>`;
+    grid.appendChild(div);
+  }
+
+  // Pitch type usage table
+  const totalP = m.totals.pitches || 0;
+  const ptBody = $("pitchTypeTable").querySelector("tbody");
+  ptBody.innerHTML = "";
+  const ptSorted = [...m.pitchTypeCounts.entries()].sort((a,b)=>b[1]-a[1]);
+  for(const [type, count] of ptSorted){
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${escapeHtml(type)}</td><td class="right">${count}</td><td class="right">${pct(count, totalP)}</td>`;
+    ptBody.appendChild(tr);
+  }
+  if(ptSorted.length === 0){
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td colspan="3" class="muted">No pitches yet.</td>`;
+    ptBody.appendChild(tr);
+  }
+
+  // Zone usage table (1-9)
+  const zBody = $("zoneTable").querySelector("tbody");
+  zBody.innerHTML = "";
+  const zSorted = [...m.zoneCounts.entries()].sort((a,b)=>b[1]-a[1]);
+  for(const [zone, count] of zSorted){
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td>${escapeHtml(zone)}</td><td class="right">${count}</td><td class="right">${pct(count, totalP)}</td>`;
+    zBody.appendChild(tr);
+  }
+  if(zSorted.length === 0){
+    const tr = document.createElement("tr");
+    tr.innerHTML = `<td colspan="3" class="muted">No zones yet.</td>`;
+    zBody.appendChild(tr);
+  }
+}
+
+function updateUI(){
+  $("pitcherName").value = state.meta.pitcherName || "";
+  $("opponent").value = state.meta.opponent || "";
+  $("notes").value = state.notes || "";
+
+  $("countText").textContent = `${state.count.balls}-${state.count.strikes}`;
+  $("pitchCountText").textContent = String(state.totals.pitches);
+  $("kText").textContent = String(state.totals.k);
+  $("bbText").textContent = String(state.totals.bb);
+  $("hText").textContent = String(state.totals.h);
+  $("outsText").textContent = String(state.totals.outs);
+
+  refreshBatterDropdown();
+
+  document.querySelectorAll(".zoneCell").forEach(el=>{
+    el.classList.toggle("active", el.dataset.zone === String(state.selectedZone));
+  });
+
+  // log
+  const tbody = $("logTable").querySelector("tbody");
+  tbody.innerHTML = "";
+  const maxRows = 20;
+  state.log.slice(0, maxRows).forEach(e=>{
+    const tr = document.createElement("tr");
+    const c1 = document.createElement("td");
+    c1.textContent = "#" + e.n;
+    const c2 = document.createElement("td");
+
+    const parts = [];
+    parts.push(`<span class="tag">${escapeHtml(e.pitchType)}</span>`);
+    if(e.velo) parts.push(`<span class="tag">${escapeHtml(e.velo)} mph</span>`);
+    if(e.zone) parts.push(`<span class="tag">Zone ${escapeHtml(String(e.zone))}</span>`);
+    parts.push(`<strong>${escapeHtml(e.batter)}</strong> — ${prettyAction(e.action)}`);
+
+    if(e.paEnded && e.paResult){
+      parts.push(`<div style="margin-top:6px;"><span class="tag" style="color:#fff;border-color:rgba(255,255,255,.25)">${escapeHtml(e.paResult)}</span></div>`);
+    }
+    c2.innerHTML = parts.join(" ");
+
+    const c3 = document.createElement("td");
+    c3.className = "right";
+    c3.textContent = `${e.afterCount.balls}-${e.afterCount.strikes}`;
+
+    tr.appendChild(c1); tr.appendChild(c2); tr.appendChild(c3);
+    tbody.appendChild(tr);
+  });
+
+  // advanced metrics render
+  renderMetrics();
+
+  saveState();
+}
+
+function handleAction(action){
+  if(action === "undo"){ undoLast(); return; }
+
+  const before = { balls: state.count.balls, strikes: state.count.strikes };
   state.totals.pitches += 1;
 
   const { paEnded, paResult } = applyActionToCount(action);
-
   const after = { balls: state.count.balls, strikes: state.count.strikes };
 
   logEvent(action, paEnded, paResult, before, after);
 
-  // if PA ended, finalize totals + reset count + move batter
   if(paEnded){
     endPlateAppearance(paResult);
     toast(paResult === "STRIKEOUT" ? "Strikeout!" : (paResult === "WALK" ? "Walk!" : "PA Ended"));
   }else{
     toast(prettyAction(action));
   }
-
   updateUI();
 }
 
-function nextBatter(){
-  if(state.lineup.length === 0) return;
-  state.currentBatterIndex = (state.currentBatterIndex + 1) % state.lineup.length;
-}
-function resetCount(){
-  state.count = { balls: 0, strikes: 0 };
-}
-
-function undoLast(){
-  const last = state.log.shift();
-  if(!last){
-    toast("Nothing to undo");
-    return;
-  }
-
-  // revert pitch count
-  state.totals.pitches = Math.max(0, state.totals.pitches - 1);
-
-  // revert count to beforeCount (BUT if the last action ended PA, we also need to revert totals + batter index)
-  state.count = { balls: last.beforeCount.balls, strikes: last.beforeCount.strikes };
-
-  if(last.paEnded && last.paResult){
-    // revert totals
-    if(last.paResult === "STRIKEOUT") state.totals.k = Math.max(0, state.totals.k - 1);
-    if(last.paResult === "WALK") state.totals.bb = Math.max(0, state.totals.bb - 1);
-    if(["SINGLE","DOUBLE","TRIPLE","HR"].includes(last.paResult)) state.totals.h = Math.max(0, state.totals.h - 1);
-    if(last.paResult === "OUT") state.totals.outs = Math.max(0, state.totals.outs - 1);
-
-    // undo batter advance (go back one)
-    if(state.lineup.length > 0){
-      state.currentBatterIndex = (state.currentBatterIndex - 1 + state.lineup.length) % state.lineup.length;
-    }
-  }
-
-  toast("Undid last");
-  updateUI();
-}
-
-/* -----------------------
-   Export helpers
------------------------ */
 function downloadFile(filename, text){
   const blob = new Blob([text], {type:"text/plain;charset=utf-8"});
   const url = URL.createObjectURL(blob);
@@ -629,21 +761,22 @@ function downloadFile(filename, text){
   a.remove();
   setTimeout(()=>URL.revokeObjectURL(url), 800);
 }
-
 function exportJSON(){
-  const payload = JSON.stringify(state, null, 2);
-  downloadFile(`pitch-tracker-${Date.now()}.json`, payload);
+  downloadFile(`pitch-tracker-${Date.now()}.json`, JSON.stringify(state, null, 2));
 }
-
+function csvSafe(v){
+  const s = String(v ?? "");
+  if(/[,"\n]/.test(s)) return `"${s.replace(/"/g,'""')}"`;
+  return s;
+}
 function exportCSV(){
-  // flat pitch log
   const cols = [
     "n","timestamp","batter","batterJersey","pitchType","velo","zone",
     "action","beforeBalls","beforeStrikes","afterBalls","afterStrikes","paEnded","paResult"
   ];
   const rows = [cols.join(",")];
-  for(const e of [...state.log].reverse()){ // oldest first
-    const row = [
+  for(const e of [...state.log].reverse()){
+    rows.push([
       e.n,
       new Date(e.ts).toISOString(),
       csvSafe(e.batter),
@@ -658,20 +791,12 @@ function exportCSV(){
       e.afterCount.strikes,
       e.paEnded ? "1" : "0",
       csvSafe(e.paResult || "")
-    ];
-    rows.push(row.join(","));
+    ].join(","));
   }
   downloadFile(`pitch-tracker-${Date.now()}.csv`, rows.join("\n"));
 }
-function csvSafe(v){
-  const s = String(v ?? "");
-  if(/[,"\n]/.test(s)) return `"${s.replace(/"/g,'""')}"`;
-  return s;
-}
 
-/* -----------------------
-   Wire up UI events
------------------------ */
+/* Events */
 document.querySelectorAll("button[data-action]").forEach(btn=>{
   btn.addEventListener("click", ()=> handleAction(btn.dataset.action));
 });
@@ -696,8 +821,7 @@ $("batterSelect").addEventListener("change", (e)=>{
 });
 
 $("loadLineupBtn").addEventListener("click", ()=>{
-  const lineupText = $("lineup").value;
-  const parsed = parseLineup(lineupText);
+  const parsed = parseLineup($("lineup").value);
   state.lineup = parsed;
   state.currentBatterIndex = 0;
   resetCount();
@@ -705,18 +829,9 @@ $("loadLineupBtn").addEventListener("click", ()=>{
   toast(`Loaded ${parsed.length} hitters`);
 });
 
-$("pitcherName").addEventListener("input", (e)=>{
-  state.meta.pitcherName = e.target.value;
-  saveState();
-});
-$("opponent").addEventListener("input", (e)=>{
-  state.meta.opponent = e.target.value;
-  saveState();
-});
-$("notes").addEventListener("input", (e)=>{
-  state.notes = e.target.value;
-  saveState();
-});
+$("pitcherName").addEventListener("input", (e)=>{ state.meta.pitcherName = e.target.value; saveState(); });
+$("opponent").addEventListener("input", (e)=>{ state.meta.opponent = e.target.value; saveState(); });
+$("notes").addEventListener("input", (e)=>{ state.notes = e.target.value; saveState(); });
 
 $("exportJsonBtn").addEventListener("click", exportJSON);
 $("exportCsvBtn").addEventListener("click", exportCSV);
@@ -728,7 +843,6 @@ $("wipeBtn").addEventListener("click", ()=>{
   location.reload();
 });
 
-// zone selection
 document.querySelectorAll(".zoneCell").forEach(cell=>{
   cell.addEventListener("click", ()=>{
     const z = cell.dataset.zone;
@@ -737,11 +851,8 @@ document.querySelectorAll(".zoneCell").forEach(cell=>{
   });
 });
 
-/* -----------------------
-   Initial render
------------------------ */
+/* init */
 (function init(){
-  // Keep the lineup textarea synced (optional, user can ignore)
   if(state.lineup.length){
     $("lineup").value = state.lineup.map((b,i)=>`${i+1}) ${b.display}`).join("\n");
   }
