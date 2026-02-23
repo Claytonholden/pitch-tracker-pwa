@@ -1,863 +1,1031 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Pitch Tracker (Offline)</title>
   <style>
     :root{
-      --bg:#0b1020;
-      --card:#121a33;
-      --muted:#98a2b3;
-      --text:#eef2ff;
-      --accent:#7c3aed;
-      --good:#22c55e;
-      --warn:#f59e0b;
-      --bad:#ef4444;
-      --btn:#1f2a52;
+      --bg:#0b1220; --card:#111a2e; --card2:#0f1830;
+      --text:#e7eefc; --muted:#9bb0d0;
+      --accent:#62a2ff; --good:#45d483; --warn:#ffcc66; --bad:#ff5b6e;
+      --border:rgba(255,255,255,.10);
+      --shadow: 0 10px 30px rgba(0,0,0,.35);
+      --radius:16px;
+      --btn:rgba(255,255,255,.08);
+      --btn2:rgba(255,255,255,.12);
     }
-    *{box-sizing:border-box; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;}
-    body{margin:0; background:var(--bg); color:var(--text);}
-    .wrap{max-width:980px; margin:0 auto; padding:14px;}
-    h1{font-size:18px; margin:0 0 10px 0; font-weight:800; letter-spacing:.2px}
-    .row{display:grid; grid-template-columns: 1fr; gap:12px;}
-    @media(min-width:900px){ .row{grid-template-columns: 1fr 1fr;} }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(1200px 700px at 20% -10%, rgba(98,162,255,.22), transparent 60%),
+                  radial-gradient(900px 600px at 110% 30%, rgba(69,212,131,.18), transparent 55%),
+                  var(--bg);
+      color:var(--text);
+    }
+    header{
+      padding:16px 14px 10px;
+      position: sticky; top: 0;
+      backdrop-filter: blur(10px);
+      background: linear-gradient(to bottom, rgba(11,18,32,.85), rgba(11,18,32,.55));
+      border-bottom:1px solid var(--border);
+      z-index:10;
+    }
+    .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center}
+    .title{display:flex; align-items:flex-start; justify-content:space-between; gap:10px}
+    h1{font-size:16px; margin:0; letter-spacing:.2px}
+    .sub{font-size:12px; color:var(--muted); margin-top:4px}
+    .pill{
+      padding:6px 10px; border-radius:999px; font-size:12px;
+      border:1px solid var(--border); background: rgba(255,255,255,.06);
+      display:inline-flex; gap:8px; align-items:center;
+    }
+    .pill b{color:var(--text)}
+    .container{padding:14px; max-width: 980px; margin:0 auto;}
+    .grid{
+      display:grid; gap:12px;
+      grid-template-columns: 1fr;
+    }
+    @media(min-width: 860px){
+      .grid{grid-template-columns: 1.05fr .95fr;}
+    }
     .card{
-      background:linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
-      border:1px solid rgba(255,255,255,.08);
-      border-radius:14px;
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.03));
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
       padding:12px;
-      box-shadow:0 10px 24px rgba(0,0,0,.25);
     }
-    .muted{color:var(--muted); font-size:12px;}
-    .grid2{display:grid; grid-template-columns:1fr 1fr; gap:10px;}
-    .grid3{display:grid; grid-template-columns:repeat(3,1fr); gap:10px;}
-    .grid4{display:grid; grid-template-columns:repeat(4,1fr); gap:10px;}
-    .line{height:1px; background:rgba(255,255,255,.08); margin:10px 0;}
-    input, select, textarea{
-      width:100%; padding:10px 10px; border-radius:10px;
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(0,0,0,.25); color:var(--text);
+    .card h2{
+      font-size:13px; margin:0 0 10px;
+      color: var(--muted);
+      font-weight: 650;
+      letter-spacing:.2px;
+    }
+    .divider{height:1px;background:var(--border); margin:10px 0}
+    .btn{
+      border:1px solid var(--border);
+      background: var(--btn);
+      color:var(--text);
+      padding:10px 12px;
+      border-radius: 12px;
+      font-weight:650;
+      font-size:13px;
+      cursor:pointer;
+      transition:.12s transform, .12s background;
+      user-select:none;
+    }
+    .btn:active{transform: scale(.98)}
+    .btn:hover{background: var(--btn2)}
+    .btn.primary{background: rgba(98,162,255,.18); border-color: rgba(98,162,255,.35)}
+    .btn.good{background: rgba(69,212,131,.18); border-color: rgba(69,212,131,.35)}
+    .btn.warn{background: rgba(255,204,102,.16); border-color: rgba(255,204,102,.35)}
+    .btn.bad{background: rgba(255,91,110,.16); border-color: rgba(255,91,110,.35)}
+    .btn.small{padding:8px 10px; border-radius:10px; font-size:12px}
+    .btn.wide{width:100%}
+    .btnGroup{display:flex; gap:10px; flex-wrap:wrap}
+    .btnGrid{
+      display:grid; gap:8px;
+      grid-template-columns: repeat(3, 1fr);
+    }
+    .zoneBtn{
+      padding:14px 10px;
+      border-radius: 14px;
+      font-size:16px;
+      font-weight:800;
+      background: rgba(255,255,255,.06);
+      border:1px solid var(--border);
+    }
+    .zoneBtn.selected{outline:2px solid rgba(98,162,255,.75)}
+    .flex{display:flex; align-items:center; justify-content:space-between; gap:10px}
+    input, select{
+      width:100%;
+      background: rgba(255,255,255,.06);
+      border:1px solid var(--border);
+      color:var(--text);
+      border-radius: 12px;
+      padding:10px 12px;
+      font-size:14px;
       outline:none;
     }
-    textarea{min-height:70px; resize:vertical;}
-    button{
-      width:100%;
-      padding:12px 10px;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,.10);
-      background:var(--btn);
-      color:var(--text);
-      font-weight:800;
-      letter-spacing:.2px;
-      cursor:pointer;
-      user-select:none;
-      -webkit-tap-highlight-color: transparent;
+    label{font-size:12px; color:var(--muted); display:block; margin-bottom:6px}
+    .twoCols{display:grid; grid-template-columns: 1fr 1fr; gap:10px}
+    .threeCols{display:grid; grid-template-columns: 1fr 1fr 1fr; gap:10px}
+    .statLine{display:flex; justify-content:space-between; gap:12px; font-size:13px; padding:6px 0}
+    .statLine span{color:var(--muted)}
+    .kpi{
+      display:grid; gap:10px;
+      grid-template-columns: repeat(3, 1fr);
     }
-    button:active{transform:scale(.99);}
-    .btnAccent{background:linear-gradient(180deg, rgba(124,58,237,.95), rgba(124,58,237,.75)); border-color:rgba(124,58,237,.5)}
-    .btnGood{background:rgba(34,197,94,.18); border-color:rgba(34,197,94,.45)}
-    .btnWarn{background:rgba(245,158,11,.18); border-color:rgba(245,158,11,.45)}
-    .btnBad{background:rgba(239,68,68,.18); border-color:rgba(239,68,68,.45)}
-    .mini{font-size:12px; padding:10px}
-    .kpi{display:flex; flex-wrap:wrap; gap:8px;}
-    .pill{
-      display:inline-flex; align-items:center; gap:6px;
-      padding:6px 10px; border-radius:999px;
-      border:1px solid rgba(255,255,255,.12);
-      background:rgba(0,0,0,.2);
-      font-weight:800;
-      margin-right:8px;
-    }
-    .pill strong{font-size:14px;}
-    .pill small{color:var(--muted); font-weight:700; font-size:11px;}
-    .pill.good{border-color:rgba(34,197,94,.5)}
-    .pill.warn{border-color:rgba(245,158,11,.5)}
-    .pill.bad{border-color:rgba(239,68,68,.5)}
-
-    .strikeZone{
-      display:grid;
-      grid-template-columns:repeat(3, 1fr);
-      gap:8px;
-    }
-    .zoneCell{
-      padding:14px 10px;
+    .kpi .box{
+      padding:10px; border-radius: 14px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.05);
       text-align:center;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,.10);
-      background:rgba(0,0,0,.18);
-      font-weight:900;
-      font-size:16px;
     }
-    .zoneCell.active{
-      outline:2px solid rgba(124,58,237,.85);
-      background:rgba(124,58,237,.18);
-    }
-
-    .table{
-      width:100%;
-      border-collapse:separate;
-      border-spacing:0;
-      overflow:hidden;
-      border-radius:12px;
-      border:1px solid rgba(255,255,255,.10);
-    }
-    .table th, .table td{
-      padding:10px;
-      border-bottom:1px solid rgba(255,255,255,.08);
-      font-size:12px;
-      vertical-align:top;
-    }
-    .table th{color:var(--muted); text-align:left; font-weight:900; background:rgba(0,0,0,.15)}
-    .table tr:last-child td{border-bottom:none;}
-    .right{ text-align:right; }
-    .tag{display:inline-block; padding:2px 8px; border-radius:999px; border:1px solid rgba(255,255,255,.12); font-size:11px; color:var(--muted); margin-right:6px;}
+    .kpi .box b{display:block; font-size:16px}
+    .kpi .box small{color:var(--muted)}
     .toast{
-      position:fixed; left:50%; transform:translateX(-50%);
-      bottom:14px; background:rgba(0,0,0,.75); border:1px solid rgba(255,255,255,.12);
-      padding:10px 12px; border-radius:12px; font-weight:800; font-size:12px;
+      position: fixed; left: 50%; transform: translateX(-50%);
+      bottom: 18px;
+      background: rgba(10,15,25,.92);
+      border:1px solid var(--border);
+      padding:10px 12px;
+      border-radius: 14px;
+      box-shadow: var(--shadow);
+      font-size:13px;
       display:none;
-      max-width:92vw;
+      max-width: 92vw;
+      z-index: 30;
     }
-    .metricsGrid{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:8px;
+    .toast.show{display:block}
+    .toast.good{border-color: rgba(69,212,131,.35)}
+    .toast.warn{border-color: rgba(255,204,102,.35)}
+    .toast.bad{border-color: rgba(255,91,110,.35)}
+    .modalBackdrop{
+      position: fixed; inset:0;
+      background: rgba(0,0,0,.55);
+      display:none;
+      align-items:center; justify-content:center;
+      padding: 18px;
+      z-index: 50;
     }
-    .metricBox{
-      border:1px solid rgba(255,255,255,.10);
-      background:rgba(0,0,0,.16);
-      border-radius:12px;
-      padding:10px;
+    .modalBackdrop.show{display:flex}
+    .modal{
+      width:min(640px, 95vw);
+      border-radius: 18px;
+      background: rgba(15,24,48,.95);
+      border:1px solid var(--border);
+      box-shadow: var(--shadow);
+      padding:14px;
     }
-    .metricBox .label{color:var(--muted); font-size:11px; font-weight:800; letter-spacing:.2px}
-    .metricBox .value{font-size:16px; font-weight:950; margin-top:4px}
-    .smallTable td{padding:8px; font-size:12px}
+    .modal h3{margin:0 0 6px; font-size:14px}
+    .modal p{margin:8px 0; color:var(--muted); font-size:13px; line-height:1.35}
+    .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;}
+    .mini{
+      font-size:12px; color:var(--muted);
+      padding:8px 10px; border-radius: 12px; border:1px dashed var(--border);
+      background: rgba(255,255,255,.03);
+    }
+    .tag{font-size:11px; padding:3px 8px; border-radius:999px; border:1px solid var(--border); color:var(--muted)}
+    .tag.good{color:var(--good); border-color: rgba(69,212,131,.3)}
+    .tag.warn{color:var(--warn); border-color: rgba(255,204,102,.3)}
+    .tag.bad{color:var(--bad); border-color: rgba(255,91,110,.3)}
+    .right{justify-content:flex-end}
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <h1>Pitch Tracker (Offline) — fast input + auto count</h1>
-    <div class="muted">Runs offline once loaded. Saves automatically to your phone.</div>
-
-    <div class="row" style="margin-top:12px;">
-      <!-- LEFT: CONTROLS -->
-      <div class="card">
-        <div class="grid2">
-          <div>
-            <div class="muted">Pitcher</div>
-            <input id="pitcherName" placeholder="Pitcher name (optional)" />
-          </div>
-          <div>
-            <div class="muted">Opponent</div>
-            <input id="opponent" placeholder="Opposing team" />
-          </div>
-        </div>
-
-        <div class="line"></div>
-
-        <div class="grid2">
-          <div>
-            <div class="muted">Lineup (one per line)</div>
-            <textarea id="lineup" placeholder="Example:
-1) #10 Clayton Holden
-2) #4 Jake Winland
-3) #43 Aidan Moore"></textarea>
-            <button class="mini" id="loadLineupBtn">Load/Replace Lineup</button>
-          </div>
-          <div>
-            <div class="muted">Current batter</div>
-            <select id="batterSelect"></select>
-
-            <div class="line"></div>
-
-            <div class="kpi">
-              <span class="pill warn"><small>COUNT</small> <strong id="countText">0-0</strong></span>
-              <span class="pill"><small>PITCHES</small> <strong id="pitchCountText">0</strong></span>
-              <span class="pill good"><small>K</small> <strong id="kText">0</strong></span>
-              <span class="pill"><small>BB</small> <strong id="bbText">0</strong></span>
-              <span class="pill"><small>H</small> <strong id="hText">0</strong></span>
-              <span class="pill"><small>IP OUTS</small> <strong id="outsText">0</strong></span>
-            </div>
-
-            <div class="line"></div>
-
-            <div class="grid2">
-              <div>
-                <div class="muted">Pitch type</div>
-                <select id="pitchType">
-                  <option>Fastball</option>
-                  <option>2-Seam</option>
-                  <option>Slider</option>
-                  <option>Curve</option>
-                  <option>Changeup</option>
-                  <option>Cutter</option>
-                  <option>Splitter</option>
-                  <option>Other</option>
-                </select>
-              </div>
-              <div>
-                <div class="muted">Velo (optional)</div>
-                <input id="velo" inputmode="numeric" placeholder="e.g. 86" />
-              </div>
-            </div>
-
-            <div class="line"></div>
-
-            <div class="muted">Location (tap a zone)</div>
-            <div class="strikeZone" id="zone">
-              <div class="zoneCell" data-zone="1">1</div>
-              <div class="zoneCell" data-zone="2">2</div>
-              <div class="zoneCell" data-zone="3">3</div>
-              <div class="zoneCell" data-zone="4">4</div>
-              <div class="zoneCell" data-zone="5">5</div>
-              <div class="zoneCell" data-zone="6">6</div>
-              <div class="zoneCell" data-zone="7">7</div>
-              <div class="zoneCell" data-zone="8">8</div>
-              <div class="zoneCell" data-zone="9">9</div>
-            </div>
-
-            <div class="line"></div>
-
-            <div class="muted">Quick result buttons (one tap)</div>
-            <div class="grid3" style="margin-top:8px;">
-              <button class="btnWarn" data-action="ball">Ball</button>
-              <button class="btnAccent" data-action="called_strike">Called Strike</button>
-              <button class="btnAccent" data-action="swinging_strike">Swinging Strike</button>
-
-              <button class="btnAccent" data-action="foul">Foul</button>
-              <button class="btnGood" data-action="inplay_out">In Play Out</button>
-              <button class="btnGood" data-action="error">Error (reached)</button>
-
-              <button class="btnGood" data-action="single">Single</button>
-              <button class="btnGood" data-action="double">Double</button>
-              <button class="btnGood" data-action="triple">Triple</button>
-
-              <button class="btnGood" data-action="hr">HR</button>
-              <button class="btnWarn" data-action="hbp">HBP</button>
-              <button class="btnBad" data-action="undo">Undo</button>
-            </div>
-
-            <div class="line"></div>
-
-            <div class="grid2">
-              <button id="nextBatterBtn">Next Batter ➜</button>
-              <button class="mini" id="resetCountBtn">Reset Count (0-0)</button>
-            </div>
-
-            <div class="line"></div>
-
-            <div class="grid2">
-              <button class="mini" id="exportJsonBtn">Export JSON</button>
-              <button class="mini" id="exportCsvBtn">Export CSV</button>
-            </div>
-
-            <div style="margin-top:10px;">
-              <button class="mini btnBad" id="wipeBtn">Wipe All Data (careful)</button>
-            </div>
-
-          </div>
-        </div>
-      </div>
-
-      <!-- RIGHT: LOG / METRICS -->
-      <div class="card">
-        <div class="muted">Advanced Metrics (auto)</div>
-        <div class="line"></div>
-
-        <div class="metricsGrid" id="metricsGrid"></div>
-
-        <div class="line"></div>
-
-        <div class="grid2">
-          <div>
-            <div class="muted">Pitch Type Usage</div>
-            <table class="table smallTable" id="pitchTypeTable">
-              <thead><tr><th>Type</th><th class="right">#</th><th class="right">%</th></tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-          <div>
-            <div class="muted">Zone Usage</div>
-            <table class="table smallTable" id="zoneTable">
-              <thead><tr><th>Zone</th><th class="right">#</th><th class="right">%</th></tr></thead>
-              <tbody></tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="line"></div>
-
-        <div class="muted">Session Log</div>
-        <div class="line"></div>
-
-        <table class="table" id="logTable">
-          <thead>
-            <tr>
-              <th style="width:72px;">#</th>
-              <th>What happened</th>
-              <th class="right" style="width:84px;">Count</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-
-        <div class="line"></div>
-
-        <div class="muted">Notes</div>
-        <textarea id="notes" placeholder="Optional notes (saved offline too)"></textarea>
-      </div>
+<header>
+  <div class="title">
+    <div>
+      <h1>Pitch Tracker (Offline)</h1>
+      <div class="sub">Fast input • 1–9 zones • Count tracking • Velo alerts • Rule-based plan suggestions</div>
+    </div>
+    <div class="row">
+      <div class="pill"><span>Pitch Count</span> <b id="pitchCount">0</b></div>
+      <div class="pill"><span>AB</span> <b id="abNum">1</b></div>
+      <div class="pill"><span>B/S</span> <b id="countBS">0-0</b></div>
     </div>
   </div>
+</header>
 
-  <div class="toast" id="toast"></div>
+<div class="container">
+  <div class="grid">
+
+    <!-- LEFT: Input -->
+    <section class="card">
+      <h2>Quick Entry</h2>
+
+      <div class="twoCols">
+        <div>
+          <label>Opponent Lineup (Spot)</label>
+          <select id="lineupSpot"></select>
+        </div>
+        <div>
+          <label>Batter Name (optional)</label>
+          <input id="batterName" placeholder="e.g., #10 Holden" />
+        </div>
+      </div>
+
+      <div class="threeCols" style="margin-top:10px;">
+        <div>
+          <label>Pitch Type</label>
+          <select id="pitchType">
+            <option>FB</option><option>SL</option><option>CH</option><option>CB</option><option>CT</option><option>SNK</option><option>OTHER</option>
+          </select>
+        </div>
+        <div>
+          <label>Velo (mph)</label>
+          <input id="velo" inputmode="numeric" placeholder="e.g., 86" />
+        </div>
+        <div>
+          <label>Contact (only if in-play)</label>
+          <select id="contactQ">
+            <option value="">—</option>
+            <option value="soft">Soft</option>
+            <option value="med">Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="flex" style="margin-bottom:8px;">
+        <div>
+          <div class="sub">Tap Zone (1–9)</div>
+        </div>
+        <div class="row right">
+          <span class="tag" id="zoneTag">Zone: —</span>
+          <button class="btn small" id="clearZoneBtn" type="button">Clear</button>
+        </div>
+      </div>
+
+      <div class="btnGrid" id="zoneGrid"></div>
+
+      <div class="divider"></div>
+
+      <div class="sub" style="margin-bottom:8px;">Outcome (auto-updates the count)</div>
+      <div class="btnGroup">
+        <button class="btn wide" data-outcome="ball">Ball</button>
+        <button class="btn wide" data-outcome="called_strike">Called Strike</button>
+        <button class="btn wide" data-outcome="swing_strike">Swinging Strike</button>
+        <button class="btn wide" data-outcome="foul">Foul</button>
+        <button class="btn wide primary" data-outcome="in_play">In Play</button>
+        <button class="btn wide" data-outcome="hbp">HBP</button>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="btnGroup">
+        <button class="btn good wide" id="nextBatterBtn" type="button">Next Batter</button>
+        <button class="btn warn wide" id="undoBtn" type="button">Undo Last Pitch</button>
+        <button class="btn wide" id="openPlanBtn" type="button">Plan Suggestions</button>
+      </div>
+
+      <div class="mini" style="margin-top:10px;">
+        Tip: for fastest use, set Zone + Velo (optional) then tap outcome. Use “Next Batter” when AB ends.
+      </div>
+    </section>
+
+    <!-- RIGHT: Stats + Velo Alerts settings -->
+    <section class="card">
+      <h2>Game Dashboard</h2>
+
+      <div class="kpi">
+        <div class="box">
+          <b id="kpiK">0</b><small>K</small>
+        </div>
+        <div class="box">
+          <b id="kpiBB">0</b><small>BB/HBP</small>
+        </div>
+        <div class="box">
+          <b id="kpiInPlay">0</b><small>Balls in Play</small>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="twoCols">
+        <div>
+          <h2 style="margin:0 0 8px;">Velo Alerts</h2>
+          <div class="sub" style="margin-bottom:10px;">Quick warnings based on your thresholds (offline).</div>
+
+          <div class="twoCols">
+            <div>
+              <label>Low Velo Alert (≤)</label>
+              <input id="veloLow" inputmode="numeric" placeholder="e.g., 80" />
+            </div>
+            <div>
+              <label>High Velo Alert (≥)</label>
+              <input id="veloHigh" inputmode="numeric" placeholder="e.g., 90" />
+            </div>
+          </div>
+
+          <div class="twoCols" style="margin-top:10px;">
+            <div>
+              <label>Drop Alert (mph below avg)</label>
+              <input id="veloDrop" inputmode="numeric" placeholder="e.g., 3" />
+            </div>
+            <div>
+              <label>Spike Alert (mph above avg)</label>
+              <input id="veloSpike" inputmode="numeric" placeholder="e.g., 3" />
+            </div>
+          </div>
+
+          <div class="btnGroup" style="margin-top:10px;">
+            <button class="btn small" id="saveSettingsBtn" type="button">Save</button>
+            <button class="btn small" id="resetSettingsBtn" type="button">Reset</button>
+          </div>
+        </div>
+
+        <div>
+          <h2 style="margin:0 0 8px;">This Batter</h2>
+          <div class="statLine"><span>Seen</span><b id="bSeen">0</b></div>
+          <div class="statLine"><span>First-pitch take %</span><b id="bTake1">—</b></div>
+          <div class="statLine"><span>Chase %</span><b id="bChase">—</b></div>
+          <div class="statLine"><span>Whiff %</span><b id="bWhiff">—</b></div>
+          <div class="statLine"><span>Hard-hit %</span><b id="bHard">—</b></div>
+
+          <div class="divider"></div>
+
+          <h2 style="margin:0 0 8px;">Game Summary</h2>
+          <div class="statLine"><span>Total Pitches</span><b id="gPitches">0</b></div>
+          <div class="statLine"><span>Strike %</span><b id="gStrikePct">—</b></div>
+          <div class="statLine"><span>Whiff %</span><b id="gWhiffPct">—</b></div>
+          <div class="statLine"><span>Hard-hit %</span><b id="gHardPct">—</b></div>
+
+          <div class="divider"></div>
+
+          <div class="btnGroup">
+            <button class="btn small" id="exportBtn" type="button">Export JSON</button>
+            <button class="btn small" id="clearGameBtn" type="button">Clear Game</button>
+          </div>
+          <div class="sub" style="margin-top:8px;">Everything saves to your browser (localStorage). Works offline.</div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<!-- Modal: Plan suggestions / last AB -->
+<div class="modalBackdrop" id="modalBackdrop">
+  <div class="modal">
+    <div class="flex">
+      <h3 id="modalTitle">Plan</h3>
+      <button class="btn small" id="closeModalBtn" type="button">Close</button>
+    </div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
 
 <script>
-const LS_KEY = "pitch_tracker_v2";
-const $ = (id) => document.getElementById(id);
+/**
+ * Pitch Tracker data model (offline)
+ * - pitches: array of pitch objects
+ * - lineup: array of batter slots (1..9)
+ * - game state: current batter index, count balls/strikes, AB number, KPIs
+ * - settings: velo alert thresholds
+ */
 
-const state = loadState() || {
-  meta: { pitcherName: "", opponent: "" },
-  lineup: [],
-  currentBatterIndex: 0,
-  count: { balls: 0, strikes: 0 },
-  totals: { pitches: 0, k: 0, bb: 0, h: 0, outs: 0 },
-  selectedZone: null,
-  notes: "",
-  log: []
-};
+const LS_KEY = "pitchTracker_v1";
+const LS_SETTINGS = "pitchTracker_settings_v1";
 
-function saveState(){
-  try { localStorage.setItem(LS_KEY, JSON.stringify(state)); } catch(e){}
+const defaultState = () => ({
+  lineup: Array.from({length:9}, (_,i)=>({ spot:i+1, name:"" })),
+  currentSpotIndex: 0, // 0..8
+  balls: 0,
+  strikes: 0,
+  abNumber: 1,
+  pitchCount: 0,
+  k: 0,
+  bb: 0,
+  inPlay: 0,
+  pitches: [], // each: {ts, spot, batterName, pitchType, zone, velo, outcome, contactQ, ballsBefore, strikesBefore}
+  lastPitchId: 0
+});
+
+const defaultSettings = () => ({
+  veloLow: 0,   // disabled if 0
+  veloHigh: 0,  // disabled if 0
+  veloDrop: 0,  // disabled if 0
+  veloSpike: 0  // disabled if 0
+});
+
+let state = loadState();
+let settings = loadSettings();
+
+// UI refs
+const pitchCountEl = document.getElementById("pitchCount");
+const abNumEl = document.getElementById("abNum");
+const countBSEl = document.getElementById("countBS");
+const lineupSpotSel = document.getElementById("lineupSpot");
+const batterNameEl = document.getElementById("batterName");
+const pitchTypeEl = document.getElementById("pitchType");
+const veloEl = document.getElementById("velo");
+const contactQEl = document.getElementById("contactQ");
+const zoneGrid = document.getElementById("zoneGrid");
+const zoneTag = document.getElementById("zoneTag");
+const clearZoneBtn = document.getElementById("clearZoneBtn");
+const nextBatterBtn = document.getElementById("nextBatterBtn");
+const undoBtn = document.getElementById("undoBtn");
+const openPlanBtn = document.getElementById("openPlanBtn");
+const toastEl = document.getElementById("toast");
+
+// KPI / stats refs
+const kpiK = document.getElementById("kpiK");
+const kpiBB = document.getElementById("kpiBB");
+const kpiInPlay = document.getElementById("kpiInPlay");
+const bSeen = document.getElementById("bSeen");
+const bTake1 = document.getElementById("bTake1");
+const bChase = document.getElementById("bChase");
+const bWhiff = document.getElementById("bWhiff");
+const bHard = document.getElementById("bHard");
+const gPitches = document.getElementById("gPitches");
+const gStrikePct = document.getElementById("gStrikePct");
+const gWhiffPct = document.getElementById("gWhiffPct");
+const gHardPct = document.getElementById("gHardPct");
+
+// settings refs
+const veloLowEl = document.getElementById("veloLow");
+const veloHighEl = document.getElementById("veloHigh");
+const veloDropEl = document.getElementById("veloDrop");
+const veloSpikeEl = document.getElementById("veloSpike");
+const saveSettingsBtn = document.getElementById("saveSettingsBtn");
+const resetSettingsBtn = document.getElementById("resetSettingsBtn");
+
+// modal
+const modalBackdrop = document.getElementById("modalBackdrop");
+const modalTitle = document.getElementById("modalTitle");
+const modalBody = document.getElementById("modalBody");
+const closeModalBtn = document.getElementById("closeModalBtn");
+
+// zone selection
+let selectedZone = null;
+
+// ---------- init ----------
+buildZoneGrid();
+buildLineupSelect();
+loadSettingsIntoInputs();
+syncUI();
+maybeShowRepeatBatterPopup();
+
+// ---------- helpers ----------
+function saveState() {
+  localStorage.setItem(LS_KEY, JSON.stringify(state));
 }
-function loadState(){
+function loadState() {
   try {
     const raw = localStorage.getItem(LS_KEY);
-    if(!raw) return null;
-    return JSON.parse(raw);
-  } catch(e){ return null; }
+    if (!raw) return defaultState();
+    const parsed = JSON.parse(raw);
+    // minimal repair
+    return Object.assign(defaultState(), parsed);
+  } catch {
+    return defaultState();
+  }
 }
-function toast(msg){
-  const t = $("toast");
-  t.textContent = msg;
-  t.style.display = "block";
-  clearTimeout(toast._timer);
-  toast._timer = setTimeout(()=> t.style.display="none", 1400);
+function saveSettings() {
+  localStorage.setItem(LS_SETTINGS, JSON.stringify(settings));
+}
+function loadSettings() {
+  try {
+    const raw = localStorage.getItem(LS_SETTINGS);
+    if (!raw) return defaultSettings();
+    const parsed = JSON.parse(raw);
+    return Object.assign(defaultSettings(), parsed);
+  } catch {
+    return defaultSettings();
+  }
+}
+function showToast(msg, kind="") {
+  toastEl.className = "toast show" + (kind ? " " + kind : "");
+  toastEl.textContent = msg;
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=>toastEl.classList.remove("show"), 2200);
+}
+function clampInt(n, min, max) {
+  n = parseInt(n,10);
+  if (Number.isNaN(n)) return null;
+  return Math.max(min, Math.min(max, n));
+}
+function pct(n) {
+  if (!isFinite(n)) return "—";
+  return Math.round(n*100) + "%";
+}
+function getCurrentSpot() {
+  return state.lineup[state.currentSpotIndex]?.spot || 1;
+}
+function getCurrentBatterName() {
+  const typed = batterNameEl.value.trim();
+  if (typed) return typed;
+  const inLineup = state.lineup[state.currentSpotIndex]?.name?.trim();
+  return inLineup || `Spot ${getCurrentSpot()}`;
 }
 
-function parseLineup(text){
-  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
-  const out = [];
-  for(const line of lines){
-    const cleaned = line.replace(/^\d+\)\s*/, "");
-    let jersey = "";
-    let name = cleaned;
-
-    const m1 = cleaned.match(/^#?(\d+)\s+(.*)$/);
-    if(m1){
-      jersey = m1[1];
-      name = m1[2].trim();
-    }
-    name = name.replace(/^#/, "").trim();
-
-    out.push({
-      jersey: jersey || "",
-      name: name || "Unknown",
-      display: (jersey ? `#${jersey} ` : "") + name
+// ---------- UI builders ----------
+function buildZoneGrid() {
+  zoneGrid.innerHTML = "";
+  for (let i=1; i<=9; i++) {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "zoneBtn";
+    b.textContent = i;
+    b.addEventListener("click", ()=>{
+      selectedZone = i;
+      document.querySelectorAll(".zoneBtn").forEach(x=>x.classList.remove("selected"));
+      b.classList.add("selected");
+      zoneTag.textContent = "Zone: " + i;
     });
+    zoneGrid.appendChild(b);
   }
-  return out;
 }
-
-function refreshBatterDropdown(){
-  const sel = $("batterSelect");
-  sel.innerHTML = "";
-  if(state.lineup.length === 0){
+function buildLineupSelect() {
+  lineupSpotSel.innerHTML = "";
+  for (let i=0; i<9; i++) {
     const opt = document.createElement("option");
-    opt.textContent = "(No lineup loaded)";
-    opt.value = "0";
-    sel.appendChild(opt);
-    sel.disabled = true;
-    return;
+    opt.value = i;
+    opt.textContent = `Spot ${i+1}`;
+    lineupSpotSel.appendChild(opt);
   }
-  sel.disabled = false;
-  state.lineup.forEach((b, idx) => {
-    const opt = document.createElement("option");
-    opt.value = String(idx);
-    opt.textContent = b.display;
-    sel.appendChild(opt);
+  lineupSpotSel.addEventListener("change", ()=>{
+    state.currentSpotIndex = parseInt(lineupSpotSel.value,10) || 0;
+    state.balls = 0; state.strikes = 0; // new batter view, reset count
+    saveState();
+    syncUI();
+    maybeShowRepeatBatterPopup();
   });
-  if(state.currentBatterIndex >= state.lineup.length) state.currentBatterIndex = 0;
-  sel.value = String(state.currentBatterIndex);
+}
+function loadSettingsIntoInputs() {
+  veloLowEl.value = settings.veloLow || "";
+  veloHighEl.value = settings.veloHigh || "";
+  veloDropEl.value = settings.veloDrop || "";
+  veloSpikeEl.value = settings.veloSpike || "";
 }
 
-function currentBatter(){
-  if(state.lineup.length === 0) return {jersey:"", name:"(no lineup)", display:"(no lineup)"};
-  return state.lineup[state.currentBatterIndex];
-}
+// ---------- core logic ----------
+function recordPitch(outcome) {
+  // validate minimal
+  const pitchType = pitchTypeEl.value;
+  const zone = selectedZone; // can be null, allowed
+  const velo = clampInt(veloEl.value.trim(), 0, 110);
+  const contactQ = contactQEl.value || "";
 
-function applyActionToCount(action){
-  let { balls, strikes } = state.count;
-  let paEnded = false;
-  let paResult = null;
+  // store pre-count for smarter AB summaries
+  const ballsBefore = state.balls;
+  const strikesBefore = state.strikes;
 
-  if(action === "ball"){
-    balls += 1;
-    if(balls >= 4){ paEnded = true; paResult = "WALK"; }
-  }
-  else if(action === "called_strike" || action === "swinging_strike"){
-    strikes += 1;
-    if(strikes >= 3){ paEnded = true; paResult = "STRIKEOUT"; }
-  }
-  else if(action === "foul"){
-    if(strikes < 2) strikes += 1;
-  }
-  else if(action === "hbp"){
-    paEnded = true; paResult = "HBP";
-  }
-  else if(["single","double","triple","hr"].includes(action)){
-    paEnded = true; paResult = action.toUpperCase();
-  }
-  else if(action === "inplay_out"){
-    paEnded = true; paResult = "OUT";
-  }
-  else if(action === "error"){
-    paEnded = true; paResult = "REACHED ON ERROR";
+  // update count based on outcome
+  // strikes: called_strike, swing_strike, foul (if <2)
+  // balls: ball, hbp (treat hbp like BB/HBP)
+  // in_play ends AB (user hits Next Batter)
+  if (outcome === "ball") {
+    state.balls = Math.min(4, state.balls + 1);
+  } else if (outcome === "called_strike" || outcome === "swing_strike") {
+    state.strikes = Math.min(3, state.strikes + 1);
+  } else if (outcome === "foul") {
+    if (state.strikes < 2) state.strikes += 1;
+  } else if (outcome === "hbp") {
+    // end AB logically; we count it like BB/HBP
+    state.bb += 1;
+  } else if (outcome === "in_play") {
+    state.inPlay += 1;
   }
 
-  state.count.balls = Math.max(0, Math.min(3, balls));
-  state.count.strikes = Math.max(0, Math.min(2, strikes));
+  state.pitchCount += 1;
+  state.lastPitchId += 1;
 
-  return { paEnded, paResult };
-}
-
-function endPlateAppearance(result){
-  if(result === "STRIKEOUT") state.totals.k += 1;
-  if(result === "WALK") state.totals.bb += 1;
-  if(["SINGLE","DOUBLE","TRIPLE","HR"].includes(result)) state.totals.h += 1;
-  if(result === "OUT") state.totals.outs += 1;
-
-  state.count = { balls: 0, strikes: 0 };
-  nextBatter();
-}
-
-function logEvent(action, paEnded, paResult, beforeCount, afterCount){
-  const b = currentBatter();
-  const entry = {
-    n: state.log.length + 1,
+  const pitch = {
+    id: state.lastPitchId,
     ts: Date.now(),
-    batter: b.display,
-    batterJersey: b.jersey || "",
-    batterName: b.name || "",
-    action,
-    pitchType: $("pitchType").value,
-    velo: $("velo").value.trim(),
-    zone: state.selectedZone,
-    beforeCount,
-    afterCount,
-    paEnded,
-    paResult
+    spot: getCurrentSpot(),
+    batterName: getCurrentBatterName(),
+    pitchType,
+    zone,
+    velo,
+    outcome,
+    contactQ,
+    ballsBefore,
+    strikesBefore
   };
-  state.log.unshift(entry);
-}
+  state.pitches.push(pitch);
 
-function nextBatter(){
-  if(state.lineup.length === 0) return;
-  state.currentBatterIndex = (state.currentBatterIndex + 1) % state.lineup.length;
-}
-function resetCount(){
-  state.count = { balls: 0, strikes: 0 };
-}
-
-function undoLast(){
-  const last = state.log.shift();
-  if(!last){ toast("Nothing to undo"); return; }
-
-  state.totals.pitches = Math.max(0, state.totals.pitches - 1);
-  state.count = { balls: last.beforeCount.balls, strikes: last.beforeCount.strikes };
-
-  if(last.paEnded && last.paResult){
-    if(last.paResult === "STRIKEOUT") state.totals.k = Math.max(0, state.totals.k - 1);
-    if(last.paResult === "WALK") state.totals.bb = Math.max(0, state.totals.bb - 1);
-    if(["SINGLE","DOUBLE","TRIPLE","HR"].includes(last.paResult)) state.totals.h = Math.max(0, state.totals.h - 1);
-    if(last.paResult === "OUT") state.totals.outs = Math.max(0, state.totals.outs - 1);
-
-    if(state.lineup.length > 0){
-      state.currentBatterIndex = (state.currentBatterIndex - 1 + state.lineup.length) % state.lineup.length;
+  // detect strikeout / walk automatically based on count reaching 3 or 4
+  if (outcome === "called_strike" || outcome === "swing_strike" || outcome === "foul") {
+    if (state.strikes >= 3) {
+      state.k += 1;
+      showToast("Strikeout recorded ✅", "good");
+      // keep count, but user will probably hit Next Batter
+    }
+  }
+  if (outcome === "ball") {
+    if (state.balls >= 4) {
+      state.bb += 1;
+      showToast("Walk recorded (BB) ⚾", "warn");
     }
   }
 
-  toast("Undid last");
-  updateUI();
-}
-
-function prettyAction(a){
-  const map = {
-    ball: "Ball",
-    called_strike: "Called Strike",
-    swinging_strike: "Swinging Strike",
-    foul: "Foul",
-    single: "Single",
-    double: "Double",
-    triple: "Triple",
-    hr: "Home Run",
-    hbp: "Hit By Pitch",
-    inplay_out: "In Play Out",
-    error: "Reached on Error"
-  };
-  return map[a] || a;
-}
-
-function escapeHtml(s){
-  return String(s).replace(/[&<>"']/g, (c)=>({
-    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
-  }[c]));
-}
-
-function pct(n, d){
-  if(!d) return "0.0%";
-  return ((n/d)*100).toFixed(1) + "%";
-}
-
-function computeAdvanced(){
-  // Work off log oldest->newest so we can detect "first pitch of PA"
-  const events = [...state.log].reverse();
-
-  const totals = {
-    pitches: 0,
-    balls: 0,
-    strikes: 0,
-    csw: 0,        // called + swinging strikes
-    swings: 0,     // swinging strike + foul + in-play (we count in-play as a swing)
-    whiffs: 0,     // swinging strikes
-    fouls: 0,
-    inplay: 0,     // inplay_out + hits + error
-    bf: 0,         // plate appearances ended
-    firstPitchStrikes: 0,
-    k: state.totals.k,
-    bb: state.totals.bb
-  };
-
-  const pitchTypeCounts = new Map();
-  const zoneCounts = new Map();
-
-  // Detect first pitch of each PA by watching when a PA starts:
-  // - start at beginning OR right after paEnded=true
-  let expectingFirstPitch = true;
-
-  for(const e of events){
-    totals.pitches += 1;
-
-    // pitch type / zone usage
-    pitchTypeCounts.set(e.pitchType, (pitchTypeCounts.get(e.pitchType) || 0) + 1);
-    if(e.zone){
-      zoneCounts.set(String(e.zone), (zoneCounts.get(String(e.zone)) || 0) + 1);
-    }
-
-    // classify pitch outcome
-    const a = e.action;
-
-    const isStrike =
-      (a === "called_strike" || a === "swinging_strike" || a === "foul");
-
-    const isBall =
-      (a === "ball");
-
-    const isSwing =
-      (a === "swinging_strike" || a === "foul" || a === "inplay_out" ||
-       a === "single" || a === "double" || a === "triple" || a === "hr" || a === "error");
-
-    const isInPlay =
-      (a === "inplay_out" || a === "single" || a === "double" || a === "triple" || a === "hr" || a === "error");
-
-    if(isStrike) totals.strikes += 1;
-    if(isBall) totals.balls += 1;
-
-    if(a === "called_strike" || a === "swinging_strike") totals.csw += 1;
-
-    if(isSwing) totals.swings += 1;
-    if(a === "swinging_strike") totals.whiffs += 1;
-    if(a === "foul") totals.fouls += 1;
-    if(isInPlay) totals.inplay += 1;
-
-    if(expectingFirstPitch){
-      if(isStrike) totals.firstPitchStrikes += 1;
-      expectingFirstPitch = false;
-    }
-
-    if(e.paEnded){
-      totals.bf += 1;
-      expectingFirstPitch = true;
-    }
+  // velo alerts (if velo provided)
+  if (velo !== null && velo > 0) {
+    runVeloAlerts(pitchType, velo);
   }
-
-  const kbb = totals.k - totals.bb;
-  const kbbPct = totals.bf ? ((kbb / totals.bf) * 100).toFixed(1) + "%" : "0.0%";
-  const kPct = totals.bf ? ((totals.k / totals.bf) * 100).toFixed(1) + "%" : "0.0%";
-  const bbPct = totals.bf ? ((totals.bb / totals.bf) * 100).toFixed(1) + "%" : "0.0%";
-
-  const kbbRatio = totals.bb ? (totals.k / totals.bb).toFixed(2) : (totals.k ? "∞" : "0.00");
-
-  const strikePct = pct(totals.strikes, totals.pitches);
-  const ballPct = pct(totals.balls, totals.pitches);
-  const cswPct = pct(totals.csw, totals.pitches);
-  const swingPct = pct(totals.swings, totals.pitches);
-  const whiffPct = totals.swings ? ((totals.whiffs / totals.swings) * 100).toFixed(1) + "%" : "0.0%";
-  const foulPct = totals.swings ? ((totals.fouls / totals.swings) * 100).toFixed(1) + "%" : "0.0%";
-  const fpsPct = totals.bf ? ((totals.firstPitchStrikes / totals.bf) * 100).toFixed(1) + "%" : "0.0%";
-  const pPerBF = totals.bf ? (totals.pitches / totals.bf).toFixed(2) : "0.00";
-
-  return {
-    totals,
-    derived: {
-      strikePct, ballPct, cswPct, swingPct, whiffPct, foulPct, fpsPct,
-      kPct, bbPct, kbbPct, kbb, kbbRatio, pPerBF
-    },
-    pitchTypeCounts,
-    zoneCounts
-  };
-}
-
-function renderMetrics(){
-  const m = computeAdvanced();
-  const grid = $("metricsGrid");
-  grid.innerHTML = "";
-
-  const boxes = [
-    ["BF", m.totals.bf],
-    ["Pitches / BF", m.derived.pPerBF],
-    ["Strike%", m.derived.strikePct],
-    ["Ball%", m.derived.ballPct],
-    ["CSW%", m.derived.cswPct],
-    ["Swing%", m.derived.swingPct],
-    ["Whiff%", m.derived.whiffPct],
-    ["1st Pitch Strike%", m.derived.fpsPct],
-    ["K%", m.derived.kPct],
-    ["BB%", m.derived.bbPct],
-    ["K-BB%", m.derived.kbbPct],
-    ["K/BB", m.derived.kbbRatio],
-  ];
-
-  for(const [label, value] of boxes){
-    const div = document.createElement("div");
-    div.className = "metricBox";
-    div.innerHTML = `<div class="label">${escapeHtml(label)}</div><div class="value">${escapeHtml(String(value))}</div>`;
-    grid.appendChild(div);
-  }
-
-  // Pitch type usage table
-  const totalP = m.totals.pitches || 0;
-  const ptBody = $("pitchTypeTable").querySelector("tbody");
-  ptBody.innerHTML = "";
-  const ptSorted = [...m.pitchTypeCounts.entries()].sort((a,b)=>b[1]-a[1]);
-  for(const [type, count] of ptSorted){
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${escapeHtml(type)}</td><td class="right">${count}</td><td class="right">${pct(count, totalP)}</td>`;
-    ptBody.appendChild(tr);
-  }
-  if(ptSorted.length === 0){
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td colspan="3" class="muted">No pitches yet.</td>`;
-    ptBody.appendChild(tr);
-  }
-
-  // Zone usage table (1-9)
-  const zBody = $("zoneTable").querySelector("tbody");
-  zBody.innerHTML = "";
-  const zSorted = [...m.zoneCounts.entries()].sort((a,b)=>b[1]-a[1]);
-  for(const [zone, count] of zSorted){
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td>${escapeHtml(zone)}</td><td class="right">${count}</td><td class="right">${pct(count, totalP)}</td>`;
-    zBody.appendChild(tr);
-  }
-  if(zSorted.length === 0){
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td colspan="3" class="muted">No zones yet.</td>`;
-    zBody.appendChild(tr);
-  }
-}
-
-function updateUI(){
-  $("pitcherName").value = state.meta.pitcherName || "";
-  $("opponent").value = state.meta.opponent || "";
-  $("notes").value = state.notes || "";
-
-  $("countText").textContent = `${state.count.balls}-${state.count.strikes}`;
-  $("pitchCountText").textContent = String(state.totals.pitches);
-  $("kText").textContent = String(state.totals.k);
-  $("bbText").textContent = String(state.totals.bb);
-  $("hText").textContent = String(state.totals.h);
-  $("outsText").textContent = String(state.totals.outs);
-
-  refreshBatterDropdown();
-
-  document.querySelectorAll(".zoneCell").forEach(el=>{
-    el.classList.toggle("active", el.dataset.zone === String(state.selectedZone));
-  });
-
-  // log
-  const tbody = $("logTable").querySelector("tbody");
-  tbody.innerHTML = "";
-  const maxRows = 20;
-  state.log.slice(0, maxRows).forEach(e=>{
-    const tr = document.createElement("tr");
-    const c1 = document.createElement("td");
-    c1.textContent = "#" + e.n;
-    const c2 = document.createElement("td");
-
-    const parts = [];
-    parts.push(`<span class="tag">${escapeHtml(e.pitchType)}</span>`);
-    if(e.velo) parts.push(`<span class="tag">${escapeHtml(e.velo)} mph</span>`);
-    if(e.zone) parts.push(`<span class="tag">Zone ${escapeHtml(String(e.zone))}</span>`);
-    parts.push(`<strong>${escapeHtml(e.batter)}</strong> — ${prettyAction(e.action)}`);
-
-    if(e.paEnded && e.paResult){
-      parts.push(`<div style="margin-top:6px;"><span class="tag" style="color:#fff;border-color:rgba(255,255,255,.25)">${escapeHtml(e.paResult)}</span></div>`);
-    }
-    c2.innerHTML = parts.join(" ");
-
-    const c3 = document.createElement("td");
-    c3.className = "right";
-    c3.textContent = `${e.afterCount.balls}-${e.afterCount.strikes}`;
-
-    tr.appendChild(c1); tr.appendChild(c2); tr.appendChild(c3);
-    tbody.appendChild(tr);
-  });
-
-  // advanced metrics render
-  renderMetrics();
 
   saveState();
+  syncUI();
 }
 
-function handleAction(action){
-  if(action === "undo"){ undoLast(); return; }
+function runVeloAlerts(pitchType, velo) {
+  // compute rolling average for this pitch type (or all) from last N velo pitches
+  const recent = state.pitches
+    .filter(p => p.velo && p.velo > 0 && p.pitchType === pitchType)
+    .slice(-15);
 
-  const before = { balls: state.count.balls, strikes: state.count.strikes };
-  state.totals.pitches += 1;
+  const avg = recent.length ? recent.reduce((s,p)=>s+p.velo,0)/recent.length : null;
 
-  const { paEnded, paResult } = applyActionToCount(action);
-  const after = { balls: state.count.balls, strikes: state.count.strikes };
+  // threshold alerts
+  const low = clampInt(settings.veloLow, 0, 110) || 0;
+  const high = clampInt(settings.veloHigh, 0, 110) || 0;
+  const drop = clampInt(settings.veloDrop, 0, 30) || 0;
+  const spike = clampInt(settings.veloSpike, 0, 30) || 0;
 
-  logEvent(action, paEnded, paResult, before, after);
-
-  if(paEnded){
-    endPlateAppearance(paResult);
-    toast(paResult === "STRIKEOUT" ? "Strikeout!" : (paResult === "WALK" ? "Walk!" : "PA Ended"));
-  }else{
-    toast(prettyAction(action));
+  if (low && velo <= low) {
+    showToast(`Velo LOW: ${velo} mph (${pitchType})`, "warn");
+    return;
   }
-  updateUI();
+  if (high && velo >= high) {
+    showToast(`Velo HIGH: ${velo} mph (${pitchType})`, "good");
+    return;
+  }
+  if (avg !== null && drop && velo <= avg - drop) {
+    showToast(`Velo DROP: ${velo} mph (${pitchType}) vs avg ${avg.toFixed(1)}`, "warn");
+    return;
+  }
+  if (avg !== null && spike && velo >= avg + spike) {
+    showToast(`Velo SPIKE: ${velo} mph (${pitchType}) vs avg ${avg.toFixed(1)}`, "good");
+    return;
+  }
 }
 
-function downloadFile(filename, text){
-  const blob = new Blob([text], {type:"text/plain;charset=utf-8"});
+function endABAndNextBatter() {
+  state.currentSpotIndex = (state.currentSpotIndex + 1) % 9;
+  state.abNumber += 1;
+  state.balls = 0;
+  state.strikes = 0;
+  selectedZone = null;
+  document.querySelectorAll(".zoneBtn").forEach(x=>x.classList.remove("selected"));
+  zoneTag.textContent = "Zone: —";
+  contactQEl.value = "";
+  batterNameEl.value = "";
+  saveState();
+  syncUI();
+  maybeShowRepeatBatterPopup();
+}
+
+function undoLastPitch() {
+  const last = state.pitches.pop();
+  if (!last) {
+    showToast("Nothing to undo.", "warn");
+    return;
+  }
+  // revert pitch count
+  state.pitchCount = Math.max(0, state.pitchCount - 1);
+
+  // revert KPIs and count based on last outcome
+  // NOTE: This is a reasonable undo for quick use; it restores balls/strikes to pre-values.
+  state.balls = last.ballsBefore;
+  state.strikes = last.strikesBefore;
+
+  // revert derived KPIs best-effort
+  if (last.outcome === "in_play") state.inPlay = Math.max(0, state.inPlay - 1);
+  if (last.outcome === "hbp") state.bb = Math.max(0, state.bb - 1);
+
+  // strikeout/walk revert is tricky because it may have been triggered by the pitch.
+  // We'll recompute K/BB from scratch for accuracy.
+  recomputeKPIs();
+
+  saveState();
+  syncUI();
+  showToast("Undid last pitch.", "good");
+}
+
+function recomputeKPIs() {
+  let k = 0, bb = 0, inPlay = 0;
+  // We'll re-walk through pitches, simulating counts per AB by batter spot + AB transitions.
+  // Simple: rely on recorded “walk/strikeout triggers” via count reaching 3/4 is not stored,
+  // so we approximate:
+  // - Count in-play pitches as inPlay
+  // - Count hbp as bb
+  // - Count walks when a pitch has ballsBefore==3 and outcome=="ball"
+  // - Count strikeouts when strikesBefore==2 and outcome in strike outcomes
+  for (const p of state.pitches) {
+    if (p.outcome === "in_play") inPlay++;
+    if (p.outcome === "hbp") bb++;
+    if (p.outcome === "ball" && p.ballsBefore === 3) bb++;
+    if ((p.outcome === "called_strike" || p.outcome === "swing_strike") && p.strikesBefore === 2) k++;
+    if (p.outcome === "foul" && p.strikesBefore === 1) {
+      // foul to 2 strikes isn't K; ignore
+    }
+  }
+  state.k = k;
+  state.bb = bb;
+  state.inPlay = inPlay;
+}
+
+function syncUI() {
+  pitchCountEl.textContent = state.pitchCount;
+  abNumEl.textContent = state.abNumber;
+  countBSEl.textContent = `${state.balls}-${state.strikes}`;
+  lineupSpotSel.value = String(state.currentSpotIndex);
+
+  kpiK.textContent = state.k;
+  kpiBB.textContent = state.bb;
+  kpiInPlay.textContent = state.inPlay;
+
+  // batter + game stats
+  updateStatsPanels();
+}
+
+function updateStatsPanels() {
+  const spot = getCurrentSpot();
+  const pitchesForBatter = state.pitches.filter(p => p.spot === spot);
+
+  bSeen.textContent = pitchesForBatter.length;
+
+  // first pitch take %: for each AB, look at first pitch outcome and see if batter took it (no swing)
+  const abStarts = getABFirstPitchesForSpot(spot); // [{outcome, zone, pitchType, ...}]
+  if (abStarts.length) {
+    const took = abStarts.filter(p => p.outcome === "ball" || p.outcome === "called_strike").length;
+    bTake1.textContent = pct(took / abStarts.length);
+  } else bTake1.textContent = "—";
+
+  // chase %: swing at balls (zone null OR out of strike zone concept).
+  // Since zones are 1-9 but no explicit strike zone mapping here, we’ll treat:
+  // - zone present but "ball" outcome as potential chase if outcome indicates swing (swing_strike/foul/in_play)
+  // Better simple: chase = swings on pitches recorded with zone but outcome "ball" isn't possible.
+  // So we do: chase = (swings where zone is null) / (swings)
+  const swings = pitchesForBatter.filter(p => ["swing_strike","foul","in_play"].includes(p.outcome));
+  const chases = swings.filter(p => p.zone === null);
+  bChase.textContent = swings.length ? pct(chases.length / swings.length) : "—";
+
+  // whiff %: swinging strikes / swings
+  const whiffs = pitchesForBatter.filter(p => p.outcome === "swing_strike");
+  bWhiff.textContent = swings.length ? pct(whiffs.length / swings.length) : "—";
+
+  // hard-hit %: hard / in_play
+  const inPlay = pitchesForBatter.filter(p => p.outcome === "in_play");
+  const hard = inPlay.filter(p => p.contactQ === "hard");
+  bHard.textContent = inPlay.length ? pct(hard.length / inPlay.length) : "—";
+
+  // game summary
+  gPitches.textContent = state.pitchCount;
+
+  const strikes = state.pitches.filter(p => ["called_strike","swing_strike","foul"].includes(p.outcome)).length;
+  gStrikePct.textContent = state.pitchCount ? pct(strikes / state.pitchCount) : "—";
+
+  const gSwings = state.pitches.filter(p => ["swing_strike","foul","in_play"].includes(p.outcome)).length;
+  const gWhiffs = state.pitches.filter(p => p.outcome === "swing_strike").length;
+  gWhiffPct.textContent = gSwings ? pct(gWhiffs / gSwings) : "—";
+
+  const gInPlay = state.pitches.filter(p => p.outcome === "in_play");
+  const gHard = gInPlay.filter(p => p.contactQ === "hard");
+  gHardPct.textContent = gInPlay.length ? pct(gHard.length / gInPlay.length) : "—";
+}
+
+function getABFirstPitchesForSpot(spot) {
+  // We don’t have explicit AB boundaries saved; approximate:
+  // group pitches by "abNumber at the time" isn't stored.
+  // Simple: treat each time count was 0-0 as AB start for that spot.
+  return state.pitches.filter(p => p.spot === spot && p.ballsBefore === 0 && p.strikesBefore === 0);
+}
+
+// ---------- plan suggestions + repeat popup ----------
+function maybeShowRepeatBatterPopup() {
+  const spot = getCurrentSpot();
+  const previousABs = getABSummariesForSpot(spot);
+  if (previousABs.length >= 1) {
+    const last = previousABs[previousABs.length - 1];
+    const suggestions = buildSuggestionsForSpot(spot);
+    openModal(
+      `Last AB: Spot ${spot}`,
+      renderLastAB(last) + renderSuggestions(suggestions, true)
+    );
+    // auto-close after a bit (fast)
+    setTimeout(()=>closeModal(), 2400);
+  }
+}
+
+function getABSummariesForSpot(spot) {
+  // approximate AB segments by scanning pitches for this spot and splitting on:
+  // - when pitch count goes back to 0-0 (ballsBefore=0 strikesBefore=0) excluding first entry
+  const ps = state.pitches.filter(p => p.spot === spot);
+  if (!ps.length) return [];
+  const groups = [];
+  let current = [];
+  for (let i=0; i<ps.length; i++) {
+    const p = ps[i];
+    const isNewAB = (p.ballsBefore === 0 && p.strikesBefore === 0 && current.length>0);
+    if (isNewAB) { groups.push(current); current = []; }
+    current.push(p);
+  }
+  if (current.length) groups.push(current);
+  return groups.map(groupToABSummary);
+}
+
+function groupToABSummary(group) {
+  // basic summary from last pitch in group
+  const last = group[group.length-1];
+  let result = "—";
+  if (last.outcome === "in_play") result = "Ball in Play";
+  else if (last.outcome === "hbp") result = "HBP";
+  else if (last.outcome === "ball" && last.ballsBefore === 3) result = "Walk (BB)";
+  else if ((last.outcome === "called_strike" || last.outcome === "swing_strike") && last.strikesBefore === 2) result = "Strikeout (K)";
+
+  const seq = group.map(p => `${p.pitchType}${p.zone ? `(${p.zone})` : ""}:${shortOutcome(p.outcome)}`).join(" → ");
+
+  const endCount = computeEndCountFromGroup(group);
+
+  return {
+    batterName: group[0].batterName,
+    spot: group[0].spot,
+    pitches: group,
+    result,
+    endCount,
+    sequence: seq
+  };
+}
+
+function computeEndCountFromGroup(group) {
+  // simulate count from 0-0
+  let b=0, s=0;
+  for (const p of group) {
+    if (p.outcome === "ball") b = Math.min(4, b+1);
+    if (p.outcome === "called_strike" || p.outcome === "swing_strike") s = Math.min(3, s+1);
+    if (p.outcome === "foul") { if (s<2) s++; }
+    // in_play ends but we still return final state at contact
+    if (p.outcome === "in_play") break;
+    if (p.outcome === "hbp") { b=4; break; }
+  }
+  return `${b}-${s}`;
+}
+
+function shortOutcome(o) {
+  const map = {
+    ball:"B", called_strike:"CS", swing_strike:"SS", foul:"F", in_play:"IP", hbp:"HBP"
+  };
+  return map[o] || o;
+}
+
+function buildSuggestionsForSpot(spot) {
+  const ps = state.pitches.filter(p => p.spot === spot);
+  if (ps.length < 3) {
+    return ["Not enough data yet — keep logging pitches and it’ll get smarter."];
+  }
+
+  const suggestions = [];
+
+  // 1) first pitch take rate
+  const firsts = getABFirstPitchesForSpot(spot);
+  if (firsts.length >= 2) {
+    const took = firsts.filter(p => p.outcome === "ball" || p.outcome === "called_strike").length;
+    const takeRate = took / firsts.length;
+    if (takeRate >= 0.65) suggestions.push(`High first-pitch take rate (${Math.round(takeRate*100)}%) → steal strike early.`);
+    if (takeRate <= 0.35) suggestions.push(`Aggressive early (${Math.round((1-takeRate)*100)}% swing) → start with something off-speed / on edge.`);
+  }
+
+  // 2) whiff by pitch type
+  const byType = {};
+  for (const p of ps) {
+    byType[p.pitchType] ||= { swings:0, whiffs:0 };
+    if (["swing_strike","foul","in_play"].includes(p.outcome)) byType[p.pitchType].swings++;
+    if (p.outcome === "swing_strike") byType[p.pitchType].whiffs++;
+  }
+  const best = Object.entries(byType)
+    .filter(([t,v]) => v.swings >= 3)
+    .map(([t,v]) => ({ t, rate: v.whiffs / v.swings }))
+    .sort((a,b)=>b.rate-a.rate)[0];
+
+  if (best && best.rate >= 0.30) {
+    suggestions.push(`Best whiff pitch: ${best.t} (whiff ${Math.round(best.rate*100)}%) → use it as a putaway option.`);
+  }
+
+  // 3) hard contact zones
+  const inPlay = ps.filter(p => p.outcome === "in_play");
+  const hard = inPlay.filter(p => p.contactQ === "hard");
+  const hardByZone = {};
+  hard.forEach(p => { if (p.zone) hardByZone[p.zone] = (hardByZone[p.zone]||0)+1; });
+  const worstZone = Object.entries(hardByZone).sort((a,b)=>b[1]-a[1])[0];
+  if (worstZone) suggestions.push(`Avoid Zone ${worstZone[0]} — hard contact happened there more than once.`);
+
+  // 4) chase tendency (swings with unknown zone)
+  const swings = ps.filter(p => ["swing_strike","foul","in_play"].includes(p.outcome));
+  const chases = swings.filter(p => p.zone === null);
+  if (swings.length >= 6) {
+    const chaseRate = chases.length / swings.length;
+    if (chaseRate >= 0.30) suggestions.push(`Chase tendency (${Math.round(chaseRate*100)}%) → expand off-plate with 2 strikes.`);
+    if (chaseRate <= 0.10) suggestions.push(`Disciplined hitter → win inside the zone and hit corners.`);
+  }
+
+  return suggestions.length ? suggestions.slice(0,5) : ["No strong patterns yet — keep logging."];
+}
+
+function renderLastAB(ab) {
+  const pCount = ab.pitches.length;
+  const lastPitch = ab.pitches[ab.pitches.length-1];
+  const contact = (lastPitch.outcome==="in_play" && lastPitch.contactQ) ? ` • ${lastPitch.contactQ.toUpperCase()} contact` : "";
+  return `
+    <div class="mini">
+      <div><b>${ab.batterName}</b> (Spot ${ab.spot})</div>
+      <div style="margin-top:6px;">
+        <span class="tag">${ab.result}</span>
+        <span class="tag">End Count: ${ab.endCount}</span>
+        <span class="tag">Pitches: ${pCount}</span>
+      </div>
+      <div class="mono" style="margin-top:10px; white-space:normal; line-height:1.4;">
+        ${ab.sequence}${contact}
+      </div>
+    </div>
+  `;
+}
+function renderSuggestions(list, compact=false) {
+  const items = list.map(s=>`<li style="margin:6px 0;">${escapeHtml(s)}</li>`).join("");
+  return `
+    <div style="margin-top:${compact?10:12}px;">
+      <div class="sub" style="margin-bottom:6px;">Suggestions</div>
+      <ul style="margin:0; padding-left:18px; color: var(--text);">${items}</ul>
+    </div>
+  `;
+}
+function escapeHtml(s){
+  return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+}
+
+function openModal(title, html) {
+  modalTitle.textContent = title;
+  modalBody.innerHTML = html;
+  modalBackdrop.classList.add("show");
+}
+function closeModal() {
+  modalBackdrop.classList.remove("show");
+}
+closeModalBtn.addEventListener("click", closeModal);
+modalBackdrop.addEventListener("click", (e)=>{ if(e.target===modalBackdrop) closeModal(); });
+
+// ---------- events ----------
+document.querySelectorAll("[data-outcome]").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    const outcome = btn.getAttribute("data-outcome");
+    recordPitch(outcome);
+  });
+});
+
+clearZoneBtn.addEventListener("click", ()=>{
+  selectedZone = null;
+  document.querySelectorAll(".zoneBtn").forEach(x=>x.classList.remove("selected"));
+  zoneTag.textContent = "Zone: —";
+});
+
+nextBatterBtn.addEventListener("click", ()=>{
+  endABAndNextBatter();
+});
+
+undoBtn.addEventListener("click", undoLastPitch);
+
+openPlanBtn.addEventListener("click", ()=>{
+  const spot = getCurrentSpot();
+  const abSummaries = getABSummariesForSpot(spot);
+  const last = abSummaries.length ? abSummaries[abSummaries.length-1] : null;
+  const suggestions = buildSuggestionsForSpot(spot);
+
+  const body = `
+    ${last ? renderLastAB(last) : `<div class="mini">No last AB yet for Spot ${spot}.</div>`}
+    ${renderSuggestions(suggestions)}
+  `;
+  openModal(`Plan: Spot ${spot}`, body);
+});
+
+// settings save/reset
+saveSettingsBtn.addEventListener("click", ()=>{
+  settings.veloLow = clampInt(veloLowEl.value.trim(), 0, 110) || 0;
+  settings.veloHigh = clampInt(veloHighEl.value.trim(), 0, 110) || 0;
+  settings.veloDrop = clampInt(veloDropEl.value.trim(), 0, 30) || 0;
+  settings.veloSpike = clampInt(veloSpikeEl.value.trim(), 0, 30) || 0;
+  saveSettings();
+  showToast("Settings saved.", "good");
+});
+resetSettingsBtn.addEventListener("click", ()=>{
+  settings = defaultSettings();
+  saveSettings();
+  loadSettingsIntoInputs();
+  showToast("Settings reset.", "warn");
+});
+
+// export / clear
+document.getElementById("exportBtn").addEventListener("click", ()=>{
+  const blob = new Blob([JSON.stringify({state, settings}, null, 2)], {type:"application/json"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = filename;
+  a.download = `pitch_tracker_export_${new Date().toISOString().slice(0,19).replaceAll(":","-")}.json`;
   document.body.appendChild(a);
   a.click();
   a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url), 800);
-}
-function exportJSON(){
-  downloadFile(`pitch-tracker-${Date.now()}.json`, JSON.stringify(state, null, 2));
-}
-function csvSafe(v){
-  const s = String(v ?? "");
-  if(/[,"\n]/.test(s)) return `"${s.replace(/"/g,'""')}"`;
-  return s;
-}
-function exportCSV(){
-  const cols = [
-    "n","timestamp","batter","batterJersey","pitchType","velo","zone",
-    "action","beforeBalls","beforeStrikes","afterBalls","afterStrikes","paEnded","paResult"
-  ];
-  const rows = [cols.join(",")];
-  for(const e of [...state.log].reverse()){
-    rows.push([
-      e.n,
-      new Date(e.ts).toISOString(),
-      csvSafe(e.batter),
-      csvSafe(e.batterJersey),
-      csvSafe(e.pitchType),
-      csvSafe(e.velo),
-      csvSafe(e.zone),
-      csvSafe(e.action),
-      e.beforeCount.balls,
-      e.beforeCount.strikes,
-      e.afterCount.balls,
-      e.afterCount.strikes,
-      e.paEnded ? "1" : "0",
-      csvSafe(e.paResult || "")
-    ].join(","));
-  }
-  downloadFile(`pitch-tracker-${Date.now()}.csv`, rows.join("\n"));
-}
-
-/* Events */
-document.querySelectorAll("button[data-action]").forEach(btn=>{
-  btn.addEventListener("click", ()=> handleAction(btn.dataset.action));
+  URL.revokeObjectURL(url);
+  showToast("Exported JSON.", "good");
+});
+document.getElementById("clearGameBtn").addEventListener("click", ()=>{
+  if (!confirm("Clear the current game data? This cannot be undone.")) return;
+  state = defaultState();
+  saveState();
+  selectedZone = null;
+  syncUI();
+  showToast("Game cleared.", "warn");
 });
 
-$("nextBatterBtn").addEventListener("click", ()=>{
-  nextBatter();
-  resetCount();
-  updateUI();
-  toast("Next batter");
-});
-
-$("resetCountBtn").addEventListener("click", ()=>{
-  resetCount();
-  updateUI();
-  toast("Count reset");
-});
-
-$("batterSelect").addEventListener("change", (e)=>{
-  state.currentBatterIndex = parseInt(e.target.value, 10) || 0;
-  resetCount();
-  updateUI();
-});
-
-$("loadLineupBtn").addEventListener("click", ()=>{
-  const parsed = parseLineup($("lineup").value);
-  state.lineup = parsed;
-  state.currentBatterIndex = 0;
-  resetCount();
-  updateUI();
-  toast(`Loaded ${parsed.length} hitters`);
-});
-
-$("pitcherName").addEventListener("input", (e)=>{ state.meta.pitcherName = e.target.value; saveState(); });
-$("opponent").addEventListener("input", (e)=>{ state.meta.opponent = e.target.value; saveState(); });
-$("notes").addEventListener("input", (e)=>{ state.notes = e.target.value; saveState(); });
-
-$("exportJsonBtn").addEventListener("click", exportJSON);
-$("exportCsvBtn").addEventListener("click", exportCSV);
-
-$("wipeBtn").addEventListener("click", ()=>{
-  const ok = confirm("Wipe ALL saved data? This cannot be undone.");
-  if(!ok) return;
-  localStorage.removeItem(LS_KEY);
-  location.reload();
-});
-
-document.querySelectorAll(".zoneCell").forEach(cell=>{
-  cell.addEventListener("click", ()=>{
-    const z = cell.dataset.zone;
-    state.selectedZone = (state.selectedZone === z) ? null : z;
-    updateUI();
-  });
-});
-
-/* init */
-(function init(){
-  if(state.lineup.length){
-    $("lineup").value = state.lineup.map((b,i)=>`${i+1}) ${b.display}`).join("\n");
-  }
-  updateUI();
-})();
+// ---------- initial toast ----------
+showToast("Ready. Tap zone + outcome to log pitches.", "good");
 </script>
 </body>
 </html>
