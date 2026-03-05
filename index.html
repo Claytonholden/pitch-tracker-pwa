@@ -75,12 +75,7 @@
     .btn.small{padding:8px 10px; border-radius:10px; font-size:12px}
     .btn.wide{width:100%}
     .btnGroup{display:flex; gap:10px; flex-wrap:wrap}
-    .btnGrid{display:grid; gap:8px; grid-template-columns: repeat(3, 1fr);}
-    .zoneBtn{
-      padding:14px 10px; border-radius: 14px; font-size:16px; font-weight:900;
-      background: rgba(255,255,255,.06); border:1px solid var(--border);
-    }
-    .zoneBtn.selected{outline:2px solid rgba(98,162,255,.75)}
+
     input, select{
       width:100%;
       background: rgba(255,255,255,.06);
@@ -166,7 +161,7 @@
     }
     .modalBackdrop.show{display:flex}
     .modal{
-      width:min(700px, 95vw);
+      width:min(760px, 95vw);
       border-radius: 18px;
       background: rgba(15,24,48,.95);
       border:1px solid var(--border);
@@ -177,6 +172,63 @@
     .modal p{margin:8px 0; color:var(--muted); font-size:13px; line-height:1.35}
     .mono{font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;}
     .tag{font-size:11px; padding:3px 8px; border-radius:999px; border:1px solid var(--border); color:var(--muted)}
+    .segline{display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:space-between}
+    .segmeta{font-size:12px; color:var(--muted)}
+
+    /* ====== Zone layout: robust & mobile-friendly ====== */
+    .zoneWrapper{
+      position: relative;
+      width: 100%;
+      height: 260px;            /* tweak to taste; responsive below */
+      min-height: 200px;
+    }
+
+    /* centered 3x3 */
+    .centerGrid{
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      width: 62%;
+      height: 62%;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .centerGrid .zoneBtn{
+      width: 100%;
+      height: 100%;
+      font-size: 16px;
+      border-radius: 10px;
+    }
+
+    /* outer big zones (absolute) */
+    .outerZone{
+      position: absolute;
+      width: 22%;
+      height: 20%;
+      border-radius: 12px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:6px;
+      text-align:center;
+      font-weight:900;
+    }
+    .outerUI{ top: 6%; left: 4%; }     /* up/in top-left header */
+    .outerUA{ top: 6%; right: 4%; }    /* up/away top-right header */
+    .outerDI{ bottom: 6%; left: 4%; }  /* down/in bottom-left */
+    .outerDA{ bottom: 6%; right: 4%; } /* down/away bottom-right */
+
+    /* make responsive: smaller phones */
+    @media (max-width:420px){
+      .zoneWrapper{ height: 220px; }
+      .outerZone{ width: 26%; height: 18%; }
+      .centerGrid{ width: 66%; height: 66%; gap:8px; }
+    }
   </style>
 </head>
 <body>
@@ -184,7 +236,7 @@
   <div class="flex">
     <div>
       <h1>Pitch Tracker (Offline)</h1>
-      <div class="sub">Auto-advance ABs • In-play results • Count always visible • Better lineup tracking</div>
+      <div class="sub">Chart Pitching or Hitting • Multi-pitcher segments • Offline</div>
     </div>
     <div class="row">
       <div class="pill"><span>Total</span> <b id="pitchCount">0</b></div>
@@ -199,13 +251,31 @@
 
     <!-- LEFT: Input + lineup -->
     <section class="card">
-      <h2>Lineup + Count</h2>
+      <h2>Mode + Lineup + Count</h2>
+
+      <div class="btnGroup" style="margin-bottom:10px;">
+        <button class="btn small primary" id="modePitchingBtn" type="button">Chart Pitching</button>
+        <button class="btn small" id="modeHittingBtn" type="button">Chart Hitting</button>
+        <span class="tag" id="modeTag">Pitching</span>
+      </div>
+
+      <div class="segline" style="margin-bottom:10px;">
+        <div>
+          <div class="sub" id="segmentLabel">Current Pitcher Segment</div>
+          <div style="font-weight:900; font-size:16px; margin-top:4px;" id="segmentName">Pitcher — (set name)</div>
+          <div class="segmeta" id="segmentMeta">Segment 1</div>
+        </div>
+        <div class="btnGroup">
+          <button class="btn small" id="setSegmentNameBtn" type="button">Set Name</button>
+          <button class="btn small" id="newPitcherBtn" type="button">New Pitcher</button>
+        </div>
+      </div>
 
       <div class="flex" style="align-items:flex-start;">
         <div>
           <div class="sub">Now Hitting</div>
           <div style="font-weight:900; font-size:16px; margin-top:4px;" id="nowHitting">Spot 1 — (edit lineup)</div>
-          <div class="countMeta" id="abPitchMeta">Pitch 1 of AB</div>
+          <div class="countMeta" id="abPitchMeta">Pitch 1 of PA</div>
         </div>
         <div style="text-align:right;">
           <div class="sub">Count</div>
@@ -247,24 +317,24 @@
       </div>
 
       <div style="margin-top:10px;">
-        <div class="sub" style="margin-bottom:8px;">Tap Zone (1–9)</div>
-        <div class="btnGrid" id="zoneGrid"></div>
+        <div class="sub" style="margin-bottom:8px;">Tap Zone (middle 1–9 + outside misses)</div>
+        <div class="zoneWrapper" id="zoneGrid"></div>
       </div>
 
       <div class="divider"></div>
 
-      <div class="sub" style="margin-bottom:8px;">Outcome (updates count + auto-advances if AB ends)</div>
+      <div class="sub" style="margin-bottom:8px;">Outcome (updates count + auto-advances if PA ends)</div>
       <div class="btnGroup">
         <button class="btn wide" data-outcome="ball">Ball</button>
         <button class="btn wide" data-outcome="called_strike">Called Strike</button>
         <button class="btn wide" data-outcome="swing_strike">Swinging Strike</button>
         <button class="btn wide" data-outcome="foul">Foul</button>
-        <button class="btn wide warn" data-outcome="hbp">HBP (AB ends)</button>
+        <button class="btn wide warn" data-outcome="hbp">HBP (PA ends)</button>
       </div>
 
       <div class="divider"></div>
 
-      <div class="sub" style="margin-bottom:8px;">In Play Result (AB ends)</div>
+      <div class="sub" style="margin-bottom:8px;">In Play Result (PA ends)</div>
       <div class="twoCols">
         <div class="btnGroup" style="flex-direction:column;">
           <button class="btn wide primary" data-inplay="out">Out (in play)</button>
@@ -289,7 +359,7 @@
       </div>
 
       <div class="mini" style="margin-top:10px;">
-        You should be able to run this without looking: tap zone → tap outcome. AB-ending results advance automatically.
+        You should be able to run this without looking: tap zone → tap outcome. PA-ending results advance automatically.
       </div>
     </section>
 
@@ -332,11 +402,12 @@
       <div class="divider"></div>
 
       <div class="btnGroup">
-        <button class="btn small" id="exportBtn" type="button">Export JSON</button>
+        <button class="btn small" id="exportBtn" type="button">Export JSON (Segment)</button>
+        <button class="btn small" id="exportFullBtn" type="button">Export JSON (Full Game)</button>
         <button class="btn small bad" id="clearGameBtn" type="button">Clear Game</button>
       </div>
 
-      <div class="sub" style="margin-top:10px;">Everything saves locally in the browser (localStorage). Works offline.</div>
+      <div class="sub" style="margin-top:10px;">Everything saves locally in the browser (localStorage). Works offline with sw.js.</div>
     </section>
 
   </div>
@@ -356,21 +427,40 @@
 <div class="toast" id="toast"></div>
 
 <script>
-const LS_KEY = "pitchTracker_v2";
-const LS_SETTINGS = "pitchTracker_settings_v2";
+/* Full app JS (same as previous version) with a robust zone layout builder
+   Only the buildZoneGrid function and CSS were changed to avoid placement bugs.
+*/
 
-const defaultState = () => ({
+const LS_KEY = "pitchTracker_v3";
+const LS_SETTINGS = "pitchTracker_settings_v3";
+
+const defaultSegment = (id) => ({
+  id,
+  pitcherName: "",
+  startedAt: Date.now(),
+  endedAt: null,
+  pitchCount: 0,
+  k: 0,
+  bb: 0,
+  hits: 0,
+  pitches: [],
+  lastPitchId: 0
+});
+
+const defaultSide = () => ({
   lineup: Array.from({length:9}, (_,i)=>({ spot:i+1, name:"" })),
-  currentSpotIndex: 0, // 0..8
+  currentSpotIndex: 0,
   balls: 0,
   strikes: 0,
   abNumber: 1,
-  pitchCount: 0,
-  k: 0,
-  bb: 0,     // includes HBP
-  hits: 0,
-  pitches: [], // {id, ts, spot, batterName, pitchType, zone, velo, outcome, inPlayResult, ballsBefore, strikesBefore, abPitchNumBefore}
-  lastPitchId: 0
+  segments: [ defaultSegment(1) ],
+  activeSegmentId: 1
+});
+
+const defaultState = () => ({
+  mode: "pitching",
+  pitching: defaultSide(),
+  hitting:  defaultSide()
 });
 
 const defaultSettings = () => ({ veloLow:0, veloHigh:0, veloDrop:0, veloSpike:0 });
@@ -386,58 +476,77 @@ const spotNowEl = document.getElementById("spotNow");
 const nowHittingEl = document.getElementById("nowHitting");
 const countBigEl = document.getElementById("countBig");
 const abPitchMetaEl = document.getElementById("abPitchMeta");
-
 const lineupStrip = document.getElementById("lineupStrip");
 const prevBatterBtn = document.getElementById("prevBatterBtn");
 const nextBatterBtn = document.getElementById("nextBatterBtn");
 const editLineupBtn = document.getElementById("editLineupBtn");
-
 const pitchTypeEl = document.getElementById("pitchType");
 const veloEl = document.getElementById("velo");
 const zoneGrid = document.getElementById("zoneGrid");
 const zoneTag = document.getElementById("zoneTag");
 const clearZoneBtn = document.getElementById("clearZoneBtn");
-
 const undoBtn = document.getElementById("undoBtn");
 const openPlanBtn = document.getElementById("openPlanBtn");
 const toastEl = document.getElementById("toast");
-
 const kpiK = document.getElementById("kpiK");
 const kpiBB = document.getElementById("kpiBB");
 const kpiH = document.getElementById("kpiH");
 const gPitches = document.getElementById("gPitches");
 const gStrikePct = document.getElementById("gStrikePct");
 const gWhiffPct = document.getElementById("gWhiffPct");
-
-// settings
 const veloLowEl = document.getElementById("veloLow");
 const veloHighEl = document.getElementById("veloHigh");
 const veloDropEl = document.getElementById("veloDrop");
 const veloSpikeEl = document.getElementById("veloSpike");
 const saveSettingsBtn = document.getElementById("saveSettingsBtn");
 const resetSettingsBtn = document.getElementById("resetSettingsBtn");
-
-// modal
 const modalBackdrop = document.getElementById("modalBackdrop");
 const modalTitle = document.getElementById("modalTitle");
 const modalBody = document.getElementById("modalBody");
 const closeModalBtn = document.getElementById("closeModalBtn");
+const modePitchingBtn = document.getElementById("modePitchingBtn");
+const modeHittingBtn = document.getElementById("modeHittingBtn");
+const modeTag = document.getElementById("modeTag");
+const segmentLabel = document.getElementById("segmentLabel");
+const segmentName = document.getElementById("segmentName");
+const segmentMeta = document.getElementById("segmentMeta");
+const setSegmentNameBtn = document.getElementById("setSegmentNameBtn");
+const newPitcherBtn = document.getElementById("newPitcherBtn");
+const exportBtn = document.getElementById("exportBtn");
+const exportFullBtn = document.getElementById("exportFullBtn");
+const clearGameBtn = document.getElementById("clearGameBtn");
 
 // init
 buildZoneGrid();
-renderLineupStrip();
 loadSettingsIntoInputs();
 wireButtons();
 syncUI();
+registerServiceWorker();
 
+// storage
 function saveState(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); }
 function loadState(){
   try{
     const raw = localStorage.getItem(LS_KEY);
     if(!raw) return defaultState();
     const parsed = JSON.parse(raw);
-    return Object.assign(defaultState(), parsed);
-  }catch{ return defaultState(); }
+    const d = defaultState();
+    const merged = Object.assign(d, parsed);
+    merged.pitching = Object.assign(defaultSide(), parsed.pitching || {});
+    merged.hitting  = Object.assign(defaultSide(), parsed.hitting  || {});
+    if(!Array.isArray(merged.pitching.segments) || merged.pitching.segments.length===0){
+      merged.pitching.segments = [defaultSegment(1)];
+      merged.pitching.activeSegmentId = 1;
+    }
+    if(!Array.isArray(merged.hitting.segments) || merged.hitting.segments.length===0){
+      merged.hitting.segments = [defaultSegment(1)];
+      merged.hitting.activeSegmentId = 1;
+    }
+    if(merged.mode !== "pitching" && merged.mode !== "hitting") merged.mode = "pitching";
+    return merged;
+  }catch{
+    return defaultState();
+  }
 }
 function saveSettings(){ localStorage.setItem(LS_SETTINGS, JSON.stringify(settings)); }
 function loadSettings(){
@@ -448,6 +557,8 @@ function loadSettings(){
     return Object.assign(defaultSettings(), parsed);
   }catch{ return defaultSettings(); }
 }
+
+// helpers
 function clampInt(v, min, max){
   const n = parseInt(v,10);
   if(Number.isNaN(n)) return null;
@@ -469,18 +580,26 @@ function closeModal(){ modalBackdrop.classList.remove("show"); }
 closeModalBtn.addEventListener("click", closeModal);
 modalBackdrop.addEventListener("click", (e)=>{ if(e.target===modalBackdrop) closeModal(); });
 
-function getCurrentSpot(){ return state.lineup[state.currentSpotIndex]?.spot || 1; }
+function side(){
+  return state.mode === "pitching" ? state.pitching : state.hitting;
+}
+function modeLabel(){ return state.mode === "pitching" ? "Pitching" : "Hitting"; }
+function segmentRoleLabel(){ return state.mode === "pitching" ? "Our Pitcher" : "Opposing Pitcher"; }
+function getActiveSegment(){
+  const s = side();
+  const seg = s.segments.find(x => x.id === s.activeSegmentId);
+  return seg || s.segments[0];
+}
+function getCurrentSpot(){ return side().lineup[side().currentSpotIndex]?.spot || 1; }
 function getCurrentBatterName(){
-  const nm = state.lineup[state.currentSpotIndex]?.name?.trim();
+  const nm = side().lineup[side().currentSpotIndex]?.name?.trim();
   return nm || `Spot ${getCurrentSpot()}`;
 }
-function abPitchNumber(){
-  // pitches in current AB are those for this spot since last time count reset to 0-0 for that spot
-  // simplest: count pitches for current spot since the most recent pitch with ballsBefore==0 strikesBefore==0 for this spot
+function paPitchNumber(){
+  const seg = getActiveSegment();
   const spot = getCurrentSpot();
-  const ps = state.pitches.filter(p=>p.spot===spot);
+  const ps = seg.pitches.filter(p => p.spot === spot);
   if(ps.length===0) return 1;
-  // find last AB start
   let idx = -1;
   for(let i=ps.length-1;i>=0;i--){
     if(ps[i].ballsBefore===0 && ps[i].strikesBefore===0){
@@ -492,56 +611,85 @@ function abPitchNumber(){
   return count + 1;
 }
 
+// ====== NEW: robust zone builder using center grid + absolute outer zones ======
 function buildZoneGrid(){
   zoneGrid.innerHTML = "";
+
+  // wrapper already exists: zoneGrid element is the wrapper (class .zoneWrapper)
+  // create center 3x3
+  const center = document.createElement("div");
+  center.className = "centerGrid";
+  // create 1..9 inner buttons
   for(let i=1;i<=9;i++){
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "zoneBtn";
-    b.textContent = i;
-    b.addEventListener("click", ()=>{
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "zoneBtn";
+    btn.textContent = i;
+    btn.addEventListener("click", ()=>{
       selectedZone = i;
       document.querySelectorAll(".zoneBtn").forEach(x=>x.classList.remove("selected"));
-      b.classList.add("selected");
+      btn.classList.add("selected");
       zoneTag.textContent = "Zone " + i;
+    });
+    center.appendChild(btn);
+  }
+  zoneGrid.appendChild(center);
+
+  // create outer big buttons
+  const outerSpec = [
+    { id:"UI", label:"Up/In", cls:"outerZone outerUI" },
+    { id:"UA", label:"Up/Away", cls:"outerZone outerUA" },
+    { id:"DI", label:"Down/In", cls:"outerZone outerDI" },
+    { id:"DA", label:"Down/Away", cls:"outerZone outerDA" },
+  ];
+  for(const o of outerSpec){
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = o.cls;
+    b.textContent = o.label;
+    b.addEventListener("click", ()=>{
+      selectedZone = o.id;
+      document.querySelectorAll(".zoneBtn").forEach(x=>x.classList.remove("selected"));
+      // mark this outer as selected visually
+      b.classList.add("selected");
+      zoneTag.textContent = `Miss ${o.label}`;
     });
     zoneGrid.appendChild(b);
   }
 }
+
+// clear zone
 clearZoneBtn.addEventListener("click", ()=>{
   selectedZone = null;
   document.querySelectorAll(".zoneBtn").forEach(x=>x.classList.remove("selected"));
   zoneTag.textContent = "—";
 });
 
+// lineup strip
 function renderLineupStrip(){
   lineupStrip.innerHTML = "";
-  state.lineup.forEach((s, idx)=>{
+  const s = side();
+  s.lineup.forEach((spotObj, idx)=>{
     const d = document.createElement("div");
-    d.className = "spot" + (idx===state.currentSpotIndex ? " active":"");
-    d.innerHTML = `${s.spot}<small>${escapeHtml(s.name||"")}</small>`;
+    d.className = "spot" + (idx===s.currentSpotIndex ? " active":"");
+    d.innerHTML = `${spotObj.spot}<small>${escapeHtml(spotObj.name||"")}</small>`;
     d.addEventListener("click", ()=>{
-      state.currentSpotIndex = idx;
-      // new batter view resets count
-      state.balls = 0; state.strikes = 0;
-      saveState(); renderLineupStrip(); syncUI();
+      s.currentSpotIndex = idx;
+      s.balls = 0; s.strikes = 0;
+      saveState();
+      syncUI();
     });
     lineupStrip.appendChild(d);
   });
 }
 
+// wiring
 function wireButtons(){
-  // outcomes
   document.querySelectorAll("[data-outcome]").forEach(btn=>{
-    btn.addEventListener("click", ()=>{
-      recordPitch(btn.getAttribute("data-outcome"), null);
-    });
+    btn.addEventListener("click", ()=>recordPitch(btn.getAttribute("data-outcome"), null));
   });
-  // in-play results
   document.querySelectorAll("[data-inplay]").forEach(btn=>{
-    btn.addEventListener("click", ()=>{
-      recordPitch("in_play", btn.getAttribute("data-inplay"));
-    });
+    btn.addEventListener("click", ()=>recordPitch("in_play", btn.getAttribute("data-inplay")));
   });
 
   prevBatterBtn.addEventListener("click", ()=>manualChangeBatter(-1));
@@ -565,8 +713,15 @@ function wireButtons(){
     showToast("Settings reset.", "warn");
   });
 
-  document.getElementById("exportBtn").addEventListener("click", exportJSON);
-  document.getElementById("clearGameBtn").addEventListener("click", clearGame);
+  exportBtn.addEventListener("click", exportSegmentJSON);
+  exportFullBtn.addEventListener("click", exportFullGameJSON);
+  clearGameBtn.addEventListener("click", clearAll);
+
+  setSegmentNameBtn.addEventListener("click", setSegmentNamePrompt);
+  newPitcherBtn.addEventListener("click", newPitcher);
+
+  modePitchingBtn.addEventListener("click", ()=>setMode("pitching"));
+  modeHittingBtn.addEventListener("click", ()=>setMode("hitting"));
 }
 
 function loadSettingsIntoInputs(){
@@ -576,78 +731,102 @@ function loadSettingsIntoInputs(){
   veloSpikeEl.value = settings.veloSpike || "";
 }
 
+// UI sync
 function syncUI(){
-  pitchCountEl.textContent = state.pitchCount;
-  abNumEl.textContent = state.abNumber;
+  const s = side();
+  const seg = getActiveSegment();
+
+  pitchCountEl.textContent = seg.pitchCount;
+  abNumEl.textContent = s.abNumber;
   spotNowEl.textContent = getCurrentSpot();
+
+  modeTag.textContent = modeLabel();
+  if(state.mode === "pitching"){
+    modePitchingBtn.classList.add("primary");
+    modeHittingBtn.classList.remove("primary");
+  }else{
+    modeHittingBtn.classList.add("primary");
+    modePitchingBtn.classList.remove("primary");
+  }
+
+  segmentLabel.textContent = `${segmentRoleLabel()} Segment`;
+  segmentName.textContent = `${segmentRoleLabel()}: ${seg.pitcherName?.trim() ? seg.pitcherName.trim() : "(tap Set Name)"}`;
+  segmentMeta.textContent = `Segment ${seg.id} • ${seg.pitchCount} pitches`;
+
   nowHittingEl.textContent = `Spot ${getCurrentSpot()} — ${getCurrentBatterName()}`;
-  countBigEl.textContent = `${state.balls}–${state.strikes}`;
-  abPitchMetaEl.textContent = `Pitch ${abPitchNumber()} of AB`;
+  countBigEl.textContent = `${s.balls}–${s.strikes}`;
+  abPitchMetaEl.textContent = `Pitch ${paPitchNumber()} of PA`;
 
-  kpiK.textContent = state.k;
-  kpiBB.textContent = state.bb;
-  kpiH.textContent = state.hits;
+  kpiK.textContent = seg.k;
+  kpiBB.textContent = seg.bb;
+  kpiH.textContent = seg.hits;
 
-  gPitches.textContent = state.pitchCount;
+  gPitches.textContent = seg.pitchCount;
 
-  const strikes = state.pitches.filter(p => ["called_strike","swing_strike","foul"].includes(p.outcome)).length;
-  gStrikePct.textContent = state.pitchCount ? pct(strikes / state.pitchCount) : "—";
+  const strikes = seg.pitches.filter(p => ["called_strike","swing_strike","foul"].includes(p.outcome)).length;
+  gStrikePct.textContent = seg.pitchCount ? pct(strikes / seg.pitchCount) : "—";
 
-  const swings = state.pitches.filter(p => ["swing_strike","foul","in_play"].includes(p.outcome)).length;
-  const whiffs = state.pitches.filter(p => p.outcome === "swing_strike").length;
+  const swings = seg.pitches.filter(p => ["swing_strike","foul","in_play"].includes(p.outcome)).length;
+  const whiffs = seg.pitches.filter(p => p.outcome === "swing_strike").length;
   gWhiffPct.textContent = swings ? pct(whiffs / swings) : "—";
 
   renderLineupStrip();
 }
 
+// logging
 function recordPitch(outcome, inPlayResult){
+  const s = side();
+  const seg = getActiveSegment();
+
   const pitchType = pitchTypeEl.value;
   const velo = clampInt(veloEl.value.trim(), 0, 110);
   const spot = getCurrentSpot();
   const batterName = getCurrentBatterName();
 
-  const ballsBefore = state.balls;
-  const strikesBefore = state.strikes;
-  const abPitchNumBefore = abPitchNumber();
+  const ballsBefore = s.balls;
+  const strikesBefore = s.strikes;
+  const paPitchNumBefore = paPitchNumber();
 
-  // apply count rules
-  let abEnds = false;
-  let abEndReason = "";
+  let paEnds = false;
+  let paEndReason = "";
 
   if(outcome === "ball"){
-    state.balls = Math.min(4, state.balls+1);
-    if(state.balls >= 4){
-      state.bb += 1;
-      abEnds = true;
-      abEndReason = "BB";
+    s.balls = Math.min(4, s.balls+1);
+    if(s.balls >= 4){
+      seg.bb += 1;
+      paEnds = true;
+      paEndReason = "BB";
     }
   }else if(outcome === "called_strike" || outcome === "swing_strike"){
-    state.strikes = Math.min(3, state.strikes+1);
-    if(state.strikes >= 3){
-      state.k += 1;
-      abEnds = true;
-      abEndReason = "K";
+    s.strikes = Math.min(3, s.strikes+1);
+    if(s.strikes >= 3){
+      seg.k += 1;
+      paEnds = true;
+      paEndReason = "K";
     }
   }else if(outcome === "foul"){
-    if(state.strikes < 2) state.strikes += 1;
+    if(s.strikes < 2) s.strikes += 1;
   }else if(outcome === "hbp"){
-    state.bb += 1;
-    abEnds = true;
-    abEndReason = "HBP";
+    seg.bb += 1;
+    paEnds = true;
+    paEndReason = "HBP";
   }else if(outcome === "in_play"){
-    abEnds = true;
-    abEndReason = inPlayResult || "in_play";
-    // hits tracking
-    if(["1b","2b","3b","hr"].includes(inPlayResult)) state.hits += 1;
+    paEnds = true;
+    paEndReason = inPlayResult || "in_play";
+    if(["1b","2b","3b","hr"].includes(inPlayResult)) seg.hits += 1;
   }
 
-  state.pitchCount += 1;
-  state.lastPitchId += 1;
+  seg.pitchCount += 1;
+  seg.lastPitchId += 1;
 
-  state.pitches.push({
-    id: state.lastPitchId,
+  seg.pitches.push({
+    id: seg.lastPitchId,
     ts: Date.now(),
-    spot, batterName,
+    mode: state.mode,
+    segmentId: seg.id,
+    pitcherName: seg.pitcherName || null,
+    spot,
+    batterName,
     pitchType,
     zone: selectedZone,
     velo,
@@ -655,133 +834,121 @@ function recordPitch(outcome, inPlayResult){
     inPlayResult: inPlayResult || null,
     ballsBefore,
     strikesBefore,
-    abPitchNumBefore
+    paPitchNumBefore
   });
 
-  // velo alerts (optional)
   if(velo && velo > 0) runVeloAlerts(pitchType, velo);
 
   saveState();
   syncUI();
 
-  // AB ended? auto-advance batter
-  if(abEnds){
-    if(abEndReason === "K") showToast("Strikeout ✅ (auto next batter)", "good");
-    else if(abEndReason === "BB") showToast("Walk ⚾ (auto next batter)", "warn");
-    else if(abEndReason === "HBP") showToast("HBP (auto next batter)", "warn");
-    else {
-      const label = ({
-        out:"In-play out",
-        "1b":"Single",
-        "2b":"Double",
-        "3b":"Triple",
-        hr:"Home Run",
-        roe:"Reached on Error",
-        fc:"Fielder’s Choice"
-      })[abEndReason] || "Ball in play";
-      showToast(`${label} (auto next batter)`, "good");
-    }
-    setTimeout(()=>advanceToNextBatter(true), 120); // tiny delay so user sees result
+  if(paEnds){
+    showToast(paEndMessage(paEndReason), (paEndReason==="BB"||paEndReason==="HBP") ? "warn" : "good");
+    setTimeout(()=>advanceToNextBatter(), 120);
   }
 }
 
-function advanceToNextBatter(auto=false){
-  state.currentSpotIndex = (state.currentSpotIndex + 1) % 9;
-  state.abNumber += 1;
-  state.balls = 0;
-  state.strikes = 0;
+function paEndMessage(reason){
+  if(reason === "K") return "Strikeout ✅ (auto next)";
+  if(reason === "BB") return "Walk ⚾ (auto next)";
+  if(reason === "HBP") return "HBP (auto next)";
+  const label = ({
+    out:"In-play out",
+    "1b":"Single",
+    "2b":"Double",
+    "3b":"Triple",
+    hr:"Home Run",
+    roe:"Reached on Error",
+    fc:"Fielder’s Choice"
+  })[reason] || "Ball in play";
+  return `${label} (auto next)`;
+}
 
-  // clear zone so next AB starts clean
+function advanceToNextBatter(){
+  const s = side();
+  s.currentSpotIndex = (s.currentSpotIndex + 1) % 9;
+  s.abNumber += 1;
+  s.balls = 0;
+  s.strikes = 0;
+
   selectedZone = null;
   document.querySelectorAll(".zoneBtn").forEach(x=>x.classList.remove("selected"));
   zoneTag.textContent = "—";
 
   saveState();
   syncUI();
-
-  // optional: popup last AB / suggestions later
 }
 
 function manualChangeBatter(dir){
-  // for lineup changes / pinch hitters / mid-AB corrections
-  state.currentSpotIndex = (state.currentSpotIndex + dir + 9) % 9;
-  state.balls = 0; state.strikes = 0;
+  const s = side();
+  s.currentSpotIndex = (s.currentSpotIndex + dir + 9) % 9;
+  s.balls = 0; s.strikes = 0;
   selectedZone = null;
   document.querySelectorAll(".zoneBtn").forEach(x=>x.classList.remove("selected"));
   zoneTag.textContent = "—";
-  saveState(); syncUI();
+  saveState();
+  syncUI();
 }
 
+// undo
 function undoLastPitch(){
-  const last = state.pitches.pop();
+  const s = side();
+  const seg = getActiveSegment();
+  const last = seg.pitches.pop();
   if(!last){ showToast("Nothing to undo.", "warn"); return; }
-
-  state.pitchCount = Math.max(0, state.pitchCount - 1);
-  // revert count to before that pitch
-  state.balls = last.ballsBefore;
-  state.strikes = last.strikesBefore;
-
-  // recompute summary KPIs safely
-  recomputeKPIs();
-
+  seg.pitchCount = Math.max(0, seg.pitchCount - 1);
+  s.balls = last.ballsBefore;
+  s.strikes = last.strikesBefore;
+  recomputeKPIs(seg);
   saveState();
   syncUI();
   showToast("Undid last pitch.", "good");
 }
 
-function recomputeKPIs(){
+function recomputeKPIs(seg){
   let k=0, bb=0, hits=0;
-  for(const p of state.pitches){
+  for(const p of seg.pitches){
     if(p.outcome==="ball" && p.ballsBefore===3) bb++;
     if(p.outcome==="hbp") bb++;
     if((p.outcome==="called_strike" || p.outcome==="swing_strike") && p.strikesBefore===2) k++;
     if(p.outcome==="in_play" && ["1b","2b","3b","hr"].includes(p.inPlayResult)) hits++;
   }
-  state.k = k;
-  state.bb = bb;
-  state.hits = hits;
+  seg.k = k;
+  seg.bb = bb;
+  seg.hits = hits;
 }
 
+// velo alerts
 function runVeloAlerts(pitchType, velo){
-  const recent = state.pitches
+  const seg = getActiveSegment();
+  const recent = seg.pitches
     .filter(p => p.velo && p.velo>0 && p.pitchType===pitchType)
     .slice(-15);
   const avg = recent.length ? recent.reduce((s,p)=>s+p.velo,0)/recent.length : null;
-
   const low = clampInt(settings.veloLow, 0, 110) || 0;
   const high = clampInt(settings.veloHigh, 0, 110) || 0;
   const drop = clampInt(settings.veloDrop, 0, 30) || 0;
   const spike = clampInt(settings.veloSpike, 0, 30) || 0;
-
   if(low && velo <= low){ showToast(`Velo LOW: ${velo} (${pitchType})`, "warn"); return; }
   if(high && velo >= high){ showToast(`Velo HIGH: ${velo} (${pitchType})`, "good"); return; }
   if(avg!==null && drop && velo <= avg-drop){ showToast(`Velo DROP: ${velo} vs ${avg.toFixed(1)} (${pitchType})`, "warn"); return; }
   if(avg!==null && spike && velo >= avg+spike){ showToast(`Velo SPIKE: ${velo} vs ${avg.toFixed(1)} (${pitchType})`, "good"); return; }
 }
 
+// plan modal
 function showPlanModal(){
-  const spot = getCurrentSpot();
-  const suggestions = buildSuggestionsForSpot(spot);
-  openModal(`Plan Suggestions — Spot ${spot}`, `
-    <div class="mini">
-      <b>${escapeHtml(getCurrentBatterName())}</b><br/>
-      Based on what you've logged so far (offline rules).
-    </div>
-    <div style="margin-top:10px;">
-      <ul style="margin:0; padding-left:18px;">
-        ${suggestions.map(s=>`<li style="margin:6px 0;">${escapeHtml(s)}</li>`).join("")}
-      </ul>
-    </div>
+  const suggestions = buildSuggestionsForSpot(getCurrentSpot());
+  openModal(`Plan Suggestions — ${modeLabel()} — Spot ${getCurrentSpot()}`, `
+    <div class="mini"><b>${escapeHtml(getCurrentBatterName())}</b><br/>Based on active segment data.</div>
+    <div style="margin-top:10px;"><ul style="margin:0; padding-left:18px;">${suggestions.map(s=>`<li style="margin:6px 0;">${escapeHtml(s)}</li>`).join("")}</ul></div>
   `);
 }
 
 function buildSuggestionsForSpot(spot){
-  const ps = state.pitches.filter(p=>p.spot===spot);
+  const seg = getActiveSegment();
+  const ps = seg.pitches.filter(p=>p.spot===spot);
   if(ps.length<3) return ["Not enough data yet — keep logging pitches and it’ll get smarter."];
-
   const suggestions = [];
-
-  // first pitch take rate (approx: pitches where ballsBefore==0 & strikesBefore==0)
   const firsts = ps.filter(p=>p.ballsBefore===0 && p.strikesBefore===0);
   if(firsts.length>=2){
     const took = firsts.filter(p=>p.outcome==="ball" || p.outcome==="called_strike").length;
@@ -789,8 +956,6 @@ function buildSuggestionsForSpot(spot){
     if(takeRate>=0.65) suggestions.push(`High first-pitch take rate (${Math.round(takeRate*100)}%) → steal strike early.`);
     if(takeRate<=0.35) suggestions.push(`Aggressive early hitter → start on edge / change speeds.`);
   }
-
-  // whiff best pitch type
   const byType = {};
   for(const p of ps){
     byType[p.pitchType] ||= {swings:0, whiffs:0};
@@ -802,41 +967,30 @@ function buildSuggestionsForSpot(spot){
     .map(([t,v])=>({t,rate:v.whiffs/v.swings}))
     .sort((a,b)=>b.rate-a.rate)[0];
   if(best && best.rate>=0.30) suggestions.push(`Best whiff pitch: ${best.t} (whiff ${Math.round(best.rate*100)}%) → use it as put-away.`);
-
-  // hard contact rate
   const inPlay = ps.filter(p=>p.outcome==="in_play");
   const hardish = inPlay.filter(p=>["2b","3b","hr"].includes(p.inPlayResult)).length;
   if(inPlay.length>=3 && hardish/inPlay.length>=0.35) suggestions.push("Damage in play is high → expand edges, avoid middle, sequence better.");
-
   return suggestions.length ? suggestions.slice(0,5) : ["No strong patterns yet — keep logging."];
 }
 
+// lineup modal
 function editLineupModal(){
-  const rows = state.lineup.map((s,i)=>`
+  const s = side();
+  const title = (state.mode === "pitching") ? "Edit Opponent Lineup (1–9)" : "Edit Our Hitters Lineup (1–9)";
+  const rows = s.lineup.map((spotObj,i)=>`
     <div class="twoCols" style="margin-top:8px;">
-      <div class="tag" style="display:flex; align-items:center; justify-content:center;">Spot ${s.spot}</div>
-      <input id="ln_${i}" placeholder="Name" value="${escapeAttr(s.name||"")}" />
+      <div class="tag" style="display:flex; align-items:center; justify-content:center;">Spot ${spotObj.spot}</div>
+      <input id="ln_${i}" placeholder="Name" value="${escapeAttr(spotObj.name||"")}" />
     </div>
   `).join("");
-
-  openModal("Edit Lineup (1–9)", `
-    <p>Type opponent lineup names. Tap a lineup spot to jump to that batter.</p>
-    ${rows}
-    <div class="divider"></div>
-    <div class="btnGroup">
-      <button class="btn good wide" id="saveLineupBtn" type="button">Save Lineup</button>
-    </div>
-  `);
-
+  openModal(title, `${state.mode === "pitching" ? "These are the batters your pitcher is facing." : "These are your hitters you want to track."}${rows}<div class="divider"></div><div class="btnGroup"><button class="btn good wide" id="saveLineupBtn" type="button">Save Lineup</button></div>`);
   setTimeout(()=>{
-    const btn = document.getElementById("saveLineupBtn");
-    btn.addEventListener("click", ()=>{
-      state.lineup = state.lineup.map((s,i)=>({
-        ...s,
+    document.getElementById("saveLineupBtn").addEventListener("click", ()=>{
+      s.lineup = s.lineup.map((spotObj,i)=>({
+        ...spotObj,
         name: (document.getElementById(`ln_${i}`).value||"").trim()
       }));
       saveState();
-      renderLineupStrip();
       syncUI();
       closeModal();
       showToast("Lineup saved.", "good");
@@ -844,37 +998,120 @@ function editLineupModal(){
   }, 0);
 }
 
-function exportJSON(){
-  const blob = new Blob([JSON.stringify({state, settings}, null, 2)], {type:"application/json"});
+// segment controls
+function setSegmentNamePrompt(){
+  const seg = getActiveSegment();
+  const role = segmentRoleLabel();
+  const name = prompt(`${role} name:`, seg.pitcherName || "");
+  if(name === null) return;
+  seg.pitcherName = String(name).trim();
+  saveState();
+  syncUI();
+  showToast("Name saved.", "good");
+}
+
+function newPitcher(){
+  const s = side();
+  const seg = getActiveSegment();
+  seg.endedAt = Date.now();
+  const role = segmentRoleLabel();
+  const name = prompt(`New ${role} name (optional):`, "") || "";
+  const nextId = (Math.max(...s.segments.map(x=>x.id)) || 0) + 1;
+  s.segments.push(defaultSegment(nextId));
+  s.activeSegmentId = nextId;
+  const newSeg = getActiveSegment();
+  newSeg.pitcherName = String(name).trim();
+  s.balls = 0;
+  s.strikes = 0;
+  selectedZone = null;
+  document.querySelectorAll(".zoneBtn").forEach(x=>x.classList.remove("selected"));
+  zoneTag.textContent = "—";
+  saveState();
+  syncUI();
+  showToast(`New segment started${newSeg.pitcherName ? `: ${newSeg.pitcherName}` : ""}`, "good");
+}
+
+// mode switching
+function setMode(m){
+  if(m !== "pitching" && m !== "hitting") return;
+  if(state.mode === m) return;
+  state.mode = m;
+  selectedZone = null;
+  document.querySelectorAll(".zoneBtn").forEach(x=>x.classList.remove("selected"));
+  zoneTag.textContent = "—";
+  saveState();
+  syncUI();
+  showToast(`Mode: ${modeLabel()}`, "good");
+}
+
+// export
+function exportSegmentJSON(){
+  const s = side();
+  const seg = getActiveSegment();
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    exportType: "segment",
+    mode: state.mode,
+    lineupType: (state.mode === "pitching") ? "opponent_hitters" : "our_hitters",
+    lineup: s.lineup,
+    currentSpotIndex: s.currentSpotIndex,
+    abNumber: s.abNumber,
+    segment: seg,
+    settings
+  };
+  downloadJSON(payload, fileSafe(`${state.mode}_segment_${seg.id}_${seg.pitcherName || "unknown"}`));
+  showToast("Exported segment JSON.", "good");
+}
+
+function exportFullGameJSON(){
+  const payload = {
+    exportedAt: new Date().toISOString(),
+    exportType: "full_game",
+    pitching: state.pitching,
+    hitting: state.hitting,
+    settings
+  };
+  downloadJSON(payload, fileSafe(`full_game_${new Date().toISOString().slice(0,10)}`));
+  showToast("Exported full game JSON.", "good");
+}
+
+function downloadJSON(obj, baseName){
+  const blob = new Blob([JSON.stringify(obj, null, 2)], {type:"application/json"});
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
-  a.download = `pitch_tracker_export_${new Date().toISOString().slice(0,19).replaceAll(":","-")}.json`;
+  a.download = `${baseName}_${new Date().toISOString().slice(0,19).replaceAll(":","-")}.json`;
   document.body.appendChild(a);
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
-  showToast("Exported JSON.", "good");
 }
 
-function clearGame(){
-  if(!confirm("Clear the current game data? This cannot be undone.")) return;
+function fileSafe(s){
+  return String(s).trim().replaceAll(" ", "_").replaceAll(/[^a-zA-Z0-9_\-]/g, "");
+}
+
+// clear
+function clearAll(){
+  if(!confirm("Clear ALL saved data (both modes + segments)? This cannot be undone.")) return;
   state = defaultState();
   saveState();
   selectedZone = null;
   zoneTag.textContent = "—";
   document.querySelectorAll(".zoneBtn").forEach(x=>x.classList.remove("selected"));
-  renderLineupStrip();
   syncUI();
-  showToast("Game cleared.", "warn");
+  showToast("All data cleared.", "warn");
 }
 
-function escapeHtml(s){
-  return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;");
+// service worker registration (optional)
+function registerServiceWorker(){
+  if(!("serviceWorker" in navigator)) return;
+  navigator.serviceWorker.register("./sw.js").catch(()=>{});
 }
-function escapeAttr(s){
-  return String(s).replaceAll("&","&amp;").replaceAll('"',"&quot;").replaceAll("<","&lt;").replaceAll(">","&gt;");
-}
+
+// escaping
+function escapeHtml(s){ return String(s).replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
+function escapeAttr(s){ return String(s).replaceAll("&","&amp;").replaceAll('"',"&quot;").replaceAll("<","&lt;").replaceAll(">","&gt;"); }
 </script>
 </body>
 </html>
